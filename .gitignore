@@ -1,0 +1,5 @@
+.stack-work/
+*~
+*.cabal
+twitter.env
+.DS_Store

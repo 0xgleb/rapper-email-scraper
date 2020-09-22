@@ -1,0 +1,10 @@
+* rapper-mail-scraper
+
+*TODO*:
+- [ ] Move tokens into environment variables so you can commit your changes
+- [ ] Create data types for responses to avoid manually inspecting JSON + deserialization tests
+- [ ] Implement email scraping + tests
+- [ ] Implement saving emails into a file
+- [ ] Implement duplicate removal + tests for the pure part
+- [ ] Implement recursive next page call and ensure that current max_id gets logged in case you reach the limit
+- [ ] Collect emails from all the tweets possible
