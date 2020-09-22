@@ -7,8 +7,7 @@ maintainer:          "example@example.com"
 copyright:           "2020 Author name here"
 
 extra-source-files:
-- README.md
-- ChangeLog.md
+- README.org
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -23,7 +22,10 @@ dependencies:
 - base
 - aeson
 - data-default
+- lens
+- lens-regex
 - protolude
+- regex-posix
 - text
 - twitter-conduit
 - twitter-types
@@ -32,8 +34,11 @@ library:
   source-dirs: src
 
 default-extensions:
+- DerivingStrategies
+- GeneralizedNewtypeDeriving
 - NoImplicitPrelude
 - OverloadedStrings
+- QuasiQuotes
 - RecordWildCards
 - ScopedTypeVariables
 - TypeApplications

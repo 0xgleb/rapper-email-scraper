@@ -1,6 +1,6 @@
-module LibSpec (spec) where
+module Scraper.MaxIdSpec (spec) where
 
-import Lib
+import Scraper.MaxId
 
 import Protolude
 import Test.Hspec
@@ -15,3 +15,5 @@ spec = do
           expectedMaxId = Twitter.PVInteger 1307926955614896127
 
       extractMaxId exampleNextResults `shouldBe` Just expectedMaxId
+
+    -- TODO: add failure tests

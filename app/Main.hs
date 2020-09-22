@@ -1,8 +1,8 @@
 module Main where
 
-import Lib
+import Bot
 
 import Prelude
 
 main :: IO ()
-main = scrapeRapperEmails
+main = run
