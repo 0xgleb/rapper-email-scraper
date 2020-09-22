@@ -3,3 +3,4 @@
 *.cabal
 twitter.env
 .DS_Store
+rapper-emails.txt

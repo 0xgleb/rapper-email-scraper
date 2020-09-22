@@ -3,11 +3,12 @@ module Scraper
   )
   where
 
+import Scraper.EmailFinder
 import TwitterAuth
 
 import Protolude
 
-import qualified Data.Aeson          as Aeson
+-- import qualified Data.Aeson          as Aeson
 import qualified Data.Default        as Default
 import qualified Web.Twitter.Conduit as Twitter
 import qualified Web.Twitter.Types   as Twitter
@@ -36,7 +37,7 @@ scrapeRapperEmails TwitterAuthentication{..} = do
   firstRes@Twitter.SearchResult{..} <-
     Twitter.call twInfo manager searchQuery
 
-  putStrLn $ Aeson.encode firstRes
+  extractEmails $ Twitter.searchResultStatuses firstRes
 
   -- let Twitter.SearchMetadata{..} = searchResultSearchMetadata
 
@@ -60,3 +61,19 @@ scrapeRapperEmails TwitterAuthentication{..} = do
   -- putStrLn $ Aeson.encode secondRes
 
   pure ()
+
+
+extractEmails :: [Twitter.Status] -> IO ()
+extractEmails feed = do
+  let tweets = Twitter.statusText <$> feed
+
+      emails = zip tweets $ findEmailInText <$> tweets
+
+      filePath = "rapper-emails.txt"
+
+  void $ forM emails $ \case
+    ( _ , Just ( Email email ) ) ->
+      appendFile filePath $ email <> "\n"
+
+    ( tweet , Nothing ) ->
+      putStrLn $ "Found a tweet with a missing email:\n" <> tweet

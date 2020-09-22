@@ -36,6 +36,7 @@ library:
 default-extensions:
 - DerivingStrategies
 - GeneralizedNewtypeDeriving
+- LambdaCase
 - NoImplicitPrelude
 - OverloadedStrings
 - QuasiQuotes
