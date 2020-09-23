@@ -21,25 +21,57 @@ scrapeRapperEmails session@Session{..} = do
   statuses <-
     Twitter.call twInfo manager searchQuery
 
+  putStrLn @Text $ "Received " <> show (length statuses) <> " tweets"
+
   extractEmails statuses
 
   proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
-    scrapeNext session 2 (statusId - 1)
+    scrapeNext session ScrapeNextRequest
+      { requestCount = RequestCount 2
+      , tweetCount   = TotalTweetCount $ toInteger $ length statuses
+      , maxId        = statusId - 1
+      }
 
+newtype TotalTweetCount
+  = TotalTweetCount Integer
+  deriving newtype (Show, Num)
 
-scrapeNext :: Session -> Int -> Twitter.StatusId -> IO ()
-scrapeNext session@Session{..} count maxId = do
+newtype RequestCount
+  = RequestCount Integer
+  deriving newtype (Show, Num)
+
+data ScrapeNextRequest
+  = ScrapeNextRequest
+      { requestCount :: RequestCount
+      , tweetCount   :: TotalTweetCount
+      , maxId        :: Twitter.StatusId
+      }
+
+scrapeNext :: Session -> ScrapeNextRequest -> IO ()
+scrapeNext session@Session{..} ScrapeNextRequest{..} = do
   putStrLn @Text
-    $ "Starting request #" <> show count <> " with max_id=" <> show maxId
+    $  "Starting request #" <> show requestCount
+    <> " with max_id=" <> show maxId
 
   statuses <- Twitter.call twInfo manager nextQuery
+
+  let currentTweetCount = TotalTweetCount (toInteger $ length statuses)
+      totalTweetCount = tweetCount + currentTweetCount
+  putStrLn @Text $ "Received " <> show currentTweetCount <> " tweets"
 
   extractEmails statuses
 
   putStrLn @Text "Request processing complete. Email search and extraction completed."
+  putStrLn @Text $ "I have processed " <> show totalTweetCount <> " tweets in total"
+
 
   proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
-    scrapeNext session (count + 1) (statusId - 1)
+    scrapeNext session ScrapeNextRequest
+      { requestCount = requestCount + 1
+      , tweetCount   = totalTweetCount
+      , maxId        = statusId - 1
+      }
+
 
   where
     Twitter.APIRequest{..} = searchQuery
@@ -51,12 +83,12 @@ scrapeNext session@Session{..} count maxId = do
               : _params
           }
 
+
 searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
 searchQuery
   = query
       { Twitter._params
-          = ("count", Twitter.PVInteger 2)
-          : ("max_id", Twitter.PVInteger 1272624973031432191)
+          = ("count", Twitter.PVInteger 200)
           : Twitter._params query
       }
 
