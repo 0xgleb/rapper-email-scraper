@@ -7,7 +7,8 @@
 - [X] Implement duplicate removal (from feed and saved) + tests for the pure part
 - [X] Implement recursive page call and ensure that current max_id gets logged in case you reach the limit
 - [X] Implement tweet count
-- [ ] Save tweets without emails into a separate JSON file
+- [X] Save tweets without emails into a separate JSON file
+- [ ] Move session data into MonadReader
 - [ ] Implement runtime error handling + automatic restarting
 - [ ] Return max_id from the Haskell binary
 - [ ] Change the shell script to write the new max_id into an environment variable

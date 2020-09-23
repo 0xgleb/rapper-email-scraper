@@ -3,7 +3,7 @@ module Scraper
   )
   where
 
-import Scraper.EmailFinder
+import Scraper.Email
 import TwitterAuth
 
 import Protolude
@@ -15,7 +15,7 @@ import qualified Web.Twitter.Types                    as Twitter
 
 
 scrapeRapperEmails :: Session -> IO ()
-scrapeRapperEmails session@Session{..} = do
+scrapeRapperEmails _session@Session{..} = do
   putStrLn @Text "Starting request #1"
 
   statuses <-
@@ -25,63 +25,63 @@ scrapeRapperEmails session@Session{..} = do
 
   extractEmails statuses
 
-  proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
-    scrapeNext session ScrapeNextRequest
-      { requestCount = RequestCount 2
-      , tweetCount   = TotalTweetCount $ toInteger $ length statuses
-      , maxId        = statusId - 1
-      }
+--   proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
+--     scrapeNext session ScrapeNextRequest
+--       { requestCount = RequestCount 2
+--       , tweetCount   = TotalTweetCount $ toInteger $ length statuses
+--       , maxId        = statusId - 1
+--       }
 
-newtype TotalTweetCount
-  = TotalTweetCount Integer
-  deriving newtype (Show, Num)
+-- newtype TotalTweetCount
+--   = TotalTweetCount Integer
+--   deriving newtype (Show, Num)
 
-newtype RequestCount
-  = RequestCount Integer
-  deriving newtype (Show, Num)
+-- newtype RequestCount
+--   = RequestCount Integer
+--   deriving newtype (Show, Num)
 
-data ScrapeNextRequest
-  = ScrapeNextRequest
-      { requestCount :: RequestCount
-      , tweetCount   :: TotalTweetCount
-      , maxId        :: Twitter.StatusId
-      }
+-- data ScrapeNextRequest
+--   = ScrapeNextRequest
+--       { requestCount :: RequestCount
+--       , tweetCount   :: TotalTweetCount
+--       , maxId        :: Twitter.StatusId
+--       }
 
-scrapeNext :: Session -> ScrapeNextRequest -> IO ()
-scrapeNext session@Session{..} ScrapeNextRequest{..} = do
-  putStrLn @Text
-    $  "Starting request #" <> show requestCount
-    <> " with max_id=" <> show maxId
+-- scrapeNext :: Session -> ScrapeNextRequest -> IO ()
+-- scrapeNext session@Session{..} ScrapeNextRequest{..} = do
+--   putStrLn @Text
+--     $  "Starting request #" <> show requestCount
+--     <> " with max_id=" <> show maxId
 
-  statuses <- Twitter.call twInfo manager nextQuery
+--   statuses <- Twitter.call twInfo manager nextQuery
 
-  let currentTweetCount = TotalTweetCount (toInteger $ length statuses)
-      totalTweetCount = tweetCount + currentTweetCount
-  putStrLn @Text $ "Received " <> show currentTweetCount <> " tweets"
+--   let currentTweetCount = TotalTweetCount (toInteger $ length statuses)
+--       totalTweetCount = tweetCount + currentTweetCount
+--   putStrLn @Text $ "Received " <> show currentTweetCount <> " tweets"
 
-  extractEmails statuses
+--   extractEmails statuses
 
-  putStrLn @Text "Request processing complete. Email search and extraction completed."
-  putStrLn @Text $ "I have processed " <> show totalTweetCount <> " tweets in total"
-
-
-  proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
-    scrapeNext session ScrapeNextRequest
-      { requestCount = requestCount + 1
-      , tweetCount   = totalTweetCount
-      , maxId        = statusId - 1
-      }
+--   putStrLn @Text "Request processing complete. Email search and extraction completed."
+--   putStrLn @Text $ "I have processed " <> show totalTweetCount <> " tweets in total"
 
 
-  where
-    Twitter.APIRequest{..} = searchQuery
+--   proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
+--     scrapeNext session ScrapeNextRequest
+--       { requestCount = requestCount + 1
+--       , tweetCount   = totalTweetCount
+--       , maxId        = statusId - 1
+--       }
 
-    nextQuery
-      = searchQuery
-          { Twitter._params
-              = ("max_id", Twitter.PVInteger maxId)
-              : _params
-          }
+
+--   where
+--     Twitter.APIRequest{..} = searchQuery
+
+--     nextQuery
+--       = searchQuery
+--           { Twitter._params
+--               = ("max_id", Twitter.PVInteger maxId)
+--               : _params
+--           }
 
 
 searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
@@ -98,16 +98,16 @@ searchQuery
     botHandle = "SendBeatsBot"
 
 
-proceedIfNotEmpty
-  :: [Twitter.Status]
-  -> (Twitter.Status -> IO ())
-  -> IO ()
+-- proceedIfNotEmpty
+--   :: [Twitter.Status]
+--   -> (Twitter.Status -> IO ())
+--   -> IO ()
 
-proceedIfNotEmpty statuses nextAction
-  = case lastMay $ sortOn Twitter.statusId statuses of
-      Nothing ->
-        putStrLn @Text "Twitter API returned no tweets for this request. End of scraping."
+-- proceedIfNotEmpty statuses nextAction
+--   = case lastMay $ sortOn Twitter.statusId statuses of
+--       Nothing ->
+--         putStrLn @Text "Twitter API returned no tweets for this request. End of scraping."
 
-      Just status -> do
-        putStrLn @Text ""
-        nextAction status
+--       Just status -> do
+--         putStrLn @Text ""
+--         nextAction status

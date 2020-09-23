@@ -1,4 +1,4 @@
-module Scraper.EmailFinder
+module Scraper.Email
   ( extractEmails
 
   -- * exported for testing purposes only
@@ -8,6 +8,7 @@ module Scraper.EmailFinder
   where
 
 import Scraper.Duplicates
+import Scraper.Unmatched
 
 import Control.Lens
 import Protolude
@@ -22,11 +23,13 @@ import qualified Web.Twitter.Types as Twitter
 
 extractEmails :: [Twitter.Status] -> IO ()
 extractEmails feed = do
-  let tweets = Twitter.statusText <$> feed
+  let tweets = feed <&> \Twitter.Status{..} ->
+        (statusId, statusText)
 
       maybeEmails
         = removeDuplicateEmails
-        $ zip tweets $ findEmailInText <$> tweets
+        $ zipWith (\(id, text) email -> (id, text, email)) tweets
+        $ findEmailInText . snd <$> tweets
 
       filePath = "rapper-emails.txt"
 
@@ -39,11 +42,12 @@ extractEmails feed = do
 
   emails <-
     (\accumulator -> foldM accumulator [] maybeEmails) $ \accumulated -> \case
-      (_, Just email) ->
+      (_, _, Just email) ->
         pure $ email : accumulated
 
-      (tweet, Nothing) -> do
-        putStrLn $ "Found a tweet with a missing email:\n" <> tweet
+      (statusId, tweetText, Nothing) -> do
+        saveUnmatchedTweet UnmatchedTweet{..}
+
         pure accumulated
 
 

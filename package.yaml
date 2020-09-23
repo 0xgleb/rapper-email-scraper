@@ -21,12 +21,13 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base
 - aeson
+- bytestring
 - data-default
+- directory
 - lens
 - lens-regex
 - protolude
 - regex-posix
-- directory
 - text
 - twitter-conduit
 - twitter-types
@@ -35,6 +36,7 @@ library:
   source-dirs: src
 
 default-extensions:
+- DeriveGeneric
 - DerivingStrategies
 - GeneralizedNewtypeDeriving
 - LambdaCase

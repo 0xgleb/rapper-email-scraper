@@ -1,6 +1,6 @@
-module Scraper.EmailFinderSpec (spec) where
+module Scraper.EmailSpec (spec) where
 
-import Scraper.EmailFinder
+import Scraper.Email
 
 import Protolude
 import Test.Hspec

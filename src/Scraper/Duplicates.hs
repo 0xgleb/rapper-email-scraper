@@ -6,9 +6,9 @@ module Scraper.Duplicates
 
 import Protolude
 
-removeDuplicateEmails :: Eq email => [(tweet, email)] -> [(tweet, email)]
+removeDuplicateEmails :: Eq email => [(id, tweet, email)] -> [(id, tweet, email)]
 removeDuplicateEmails
-  = removeDuplicates snd
+  = removeDuplicates $ \(_, _, email) -> email
 
 removeDuplicates :: Eq eq => (a -> eq) -> [a] -> [a]
 removeDuplicates func = \case
