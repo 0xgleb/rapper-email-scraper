@@ -6,4 +6,5 @@
 - [X] Implement saving emails into a file
 - [X] Implement duplicate removal (from feed and saved) + tests for the pure part
 - [X] Implement recursive next page call and ensure that current max_id gets logged in case you reach the limit
-- [ ] Collect emails from all the tweets possible
+- [ ] Implement runtime error handling + automatic restarting
+- [ ] Collect (ideally) 40k emails from all the tweets possible
