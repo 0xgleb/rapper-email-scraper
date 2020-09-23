@@ -16,54 +16,66 @@ import qualified Web.Twitter.Types                    as Twitter
 
 scrapeRapperEmails :: Session -> IO ()
 scrapeRapperEmails session@Session{..} = do
-  putStrLn @Text "Starting initial request"
+  putStrLn @Text "Starting request #1"
 
   statuses <-
     Twitter.call twInfo manager searchQuery
 
-  extractEmails statuses -- $ Twitter.searchResultStatuses result
+  extractEmails statuses
 
-  case lastMay $ sortOn Twitter.statusId statuses of
-    Just Twitter.Status{..} ->
-      scrapeNext session 2 (statusId - 1)
-
-    Nothing ->
-      putStrLn @Text "headMay returned Nothing after first request"
+  proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
+    scrapeNext session 2 (statusId - 1)
 
 
 scrapeNext :: Session -> Int -> Twitter.StatusId -> IO ()
 scrapeNext session@Session{..} count maxId = do
-  let Twitter.APIRequest{..} = searchQuery
-
-      nextQuery = searchQuery
-        { Twitter._params = ("max_id", Twitter.PVInteger maxId) : _params }
-
   putStrLn @Text
-    $ "Starting search #" <> show count <> " with max_id=" <> show maxId
+    $ "Starting request #" <> show count <> " with max_id=" <> show maxId
 
   statuses <- Twitter.call twInfo manager nextQuery
 
   extractEmails statuses
 
-  putStrLn @Text "Search complete. Emails extracted.\n"
+  putStrLn @Text "Request processing complete. Email search and extraction completed."
 
-  case lastMay $ sortOn Twitter.statusId statuses of
-    Just Twitter.Status{..} ->
-      scrapeNext session (count + 1) (statusId - 1)
+  proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
+    scrapeNext session (count + 1) (statusId - 1)
 
-    Nothing ->
-      putStrLn @Text "headMay returned Nothing"
+  where
+    Twitter.APIRequest{..} = searchQuery
 
+    nextQuery
+      = searchQuery
+          { Twitter._params
+              = ("max_id", Twitter.PVInteger maxId)
+              : _params
+          }
 
 searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
 searchQuery
-  = let query = Twitter.userTimeline $ Twitter.ScreenNameParam botHandle
-
-    in query { Twitter._params
-                 = ("count", Twitter.PVInteger 2)
-                 : ("max_id", Twitter.PVInteger 1294726112400965631)
-                 : Twitter._params query
-             }
+  = query
+      { Twitter._params
+          = ("count", Twitter.PVInteger 2)
+          : ("max_id", Twitter.PVInteger 1272624973031432191)
+          : Twitter._params query
+      }
 
   where
+    query = Twitter.userTimeline $ Twitter.ScreenNameParam botHandle
+
     botHandle = "SendBeatsBot"
+
+
+proceedIfNotEmpty
+  :: [Twitter.Status]
+  -> (Twitter.Status -> IO ())
+  -> IO ()
+
+proceedIfNotEmpty statuses nextAction
+  = case lastMay $ sortOn Twitter.statusId statuses of
+      Nothing ->
+        putStrLn @Text "Twitter API returned no tweets for this request. End of scraping."
+
+      Just status -> do
+        putStrLn @Text ""
+        nextAction status

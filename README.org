@@ -5,6 +5,10 @@
 - [X] Implement email scraping + tests
 - [X] Implement saving emails into a file
 - [X] Implement duplicate removal (from feed and saved) + tests for the pure part
-- [X] Implement recursive next page call and ensure that current max_id gets logged in case you reach the limit
+- [X] Implement recursive page call and ensure that current max_id gets logged in case you reach the limit
+- [ ] Implement tweet count
 - [ ] Implement runtime error handling + automatic restarting
+- [ ] Return max_id from the Haskell binary
+- [ ] Change the shell script to write the new max_id into an environment variable
+- [ ] Change the Haskell binary to read initial max_id from the environment variable
 - [ ] Collect (ideally) 40k emails from all the tweets possible
