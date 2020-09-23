@@ -4,76 +4,57 @@ module Scraper
   where
 
 import Scraper.EmailFinder
+import Scraper.MaxId
 import TwitterAuth
 
 import Protolude
 
--- import qualified Data.Aeson          as Aeson
-import qualified Data.Default        as Default
 import qualified Web.Twitter.Conduit as Twitter
 import qualified Web.Twitter.Types   as Twitter
 
 
-scrapeRapperEmails :: TwitterAuthentication -> IO ()
-scrapeRapperEmails TwitterAuthentication{..} = do
-  manager <-
-    Twitter.newManager Twitter.tlsManagerSettings
+scrapeRapperEmails :: Session -> IO ()
+scrapeRapperEmails session@Session{..} = do
+  putStrLn @Text "Starting search #1"
 
-  let twInfo = Twitter.setCredential oauth credential Default.def
-
-      oauth = Twitter.twitterOAuth
-        { Twitter.oauthConsumerKey = consumerKey
-        , Twitter.oauthConsumerSecret = consumerSecret
-        }
-
-      credential = Twitter.Credential
-        [ ("oauth_token", accessToken)
-        , ("oauth_token_secret", accessSecret)
-        ]
-
-  let searchQuery@Twitter.APIRequest{..}
-        = Twitter.searchTweets "(from:SendBeatsBot) -filter:links -filter:replies"
-
-  firstRes@Twitter.SearchResult{..} <-
+  result@Twitter.SearchResult{..} <-
     Twitter.call twInfo manager searchQuery
 
-  extractEmails $ Twitter.searchResultStatuses firstRes
+  extractEmails $ Twitter.searchResultStatuses result
 
-  -- let Twitter.SearchMetadata{..} = searchResultSearchMetadata
+  let Twitter.APIRequest{..} = searchQuery
 
-  --     secondSearch :: Twitter.APIRequest Twitter.SearchTweets (Twitter.SearchResult [Twitter.Status])
-  --     secondSearch = case searchMetadataNextResults of
-  --       Just nextResults -> case extractMaxId nextResults of
-  --         Just maxId ->
-  --           searchQuery { Twitter._params = ("max_id", maxId) : _params }
-
-  --         Nothing ->
-  --           Prelude.error "max_id not found"
-
-  --       Nothing ->
-  --         Prelude.error "ran out of tweets"
-
-  -- putStrLn @Text "Doing 2nd search"
-
-  -- secondRes <-
-  --   Twitter.call twInfo manager secondSearch
-
-  -- putStrLn $ Aeson.encode secondRes
-
-  pure ()
+  scrapeNext session 2 searchResultSearchMetadata
 
 
-extractEmails :: [Twitter.Status] -> IO ()
-extractEmails feed = do
-  let tweets = Twitter.statusText <$> feed
+scrapeNext :: Session -> Integer -> Twitter.SearchMetadata -> IO ()
+scrapeNext session@Session{..} scrapeNum Twitter.SearchMetadata{..}
+  = case searchMetadataNextResults of
+      Nothing ->
+        putStrLn @Text "Ran out of tweets"
 
-      emails = zip tweets $ findEmailInText <$> tweets
+      Just nextResults -> case extractMaxId nextResults of
+        Nothing ->
+          putStrLn @Text
+            $  "Parameter 'max_id' not found in the search metadata:\n"
+            <> show searchMetadataNextResults
 
-      filePath = "rapper-emails.txt"
+        Just maxId -> do
+          let Twitter.APIRequest{..} = searchQuery
 
-  void $ forM emails $ \case
-    ( _ , Just ( Email email ) ) ->
-      appendFile filePath $ email <> "\n"
+              nextQuery
+                = searchQuery { Twitter._params = ("max_id", maxId) : _params }
 
-    ( tweet , Nothing ) ->
-      putStrLn $ "Found a tweet with a missing email:\n" <> tweet
+          putStrLn @Text $ "Starting search #" <> show scrapeNum
+
+          result@Twitter.SearchResult{..} <-
+            Twitter.call twInfo manager nextQuery
+
+          extractEmails $ Twitter.searchResultStatuses result
+
+          scrapeNext session (scrapeNum + 1) searchResultSearchMetadata
+
+
+searchQuery :: Twitter.APIRequest Twitter.SearchTweets (Twitter.SearchResult [Twitter.Status])
+searchQuery
+  = Twitter.searchTweets "(from:SendBeatsBot) -filter:links -filter:replies"

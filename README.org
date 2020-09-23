@@ -4,6 +4,6 @@
 - [X] Move tokens into environment variables so you can commit your changes
 - [X] Implement email scraping + tests
 - [X] Implement saving emails into a file
-- [ ] Implement duplicate removal (from feed and saved) + tests for the pure part
-- [ ] Implement recursive next page call and ensure that current max_id gets logged in case you reach the limit
+- [X] Implement duplicate removal (from feed and saved) + tests for the pure part
+- [X] Implement recursive next page call and ensure that current max_id gets logged in case you reach the limit
 - [ ] Collect emails from all the tweets possible

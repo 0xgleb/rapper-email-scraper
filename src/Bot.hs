@@ -10,6 +10,6 @@ import Protolude
 
 run :: IO ()
 run = do
-  twitterAuth <- getTwitterEnvVars
+  session <- createSession
 
-  scrapeRapperEmails twitterAuth
+  scrapeRapperEmails session

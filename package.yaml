@@ -26,6 +26,7 @@ dependencies:
 - lens-regex
 - protolude
 - regex-posix
+- directory
 - text
 - twitter-conduit
 - twitter-types
@@ -45,6 +46,7 @@ default-extensions:
 - TypeApplications
 
 ghc-options:
+- -freverse-errors
 - -Wall
 - -Werror
 - -Wimplicit-prelude
@@ -63,6 +65,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -O2
     dependencies:
     - rapper-mail-scraper
 
@@ -77,3 +80,4 @@ tests:
     dependencies:
     - rapper-mail-scraper
     - hspec
+    - QuickCheck
