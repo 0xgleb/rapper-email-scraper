@@ -12,4 +12,4 @@ run :: IO ()
 run = do
   session <- createSession
 
-  scrapeRapperEmails session
+  runReaderT scrapeRapperEmails session

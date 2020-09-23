@@ -38,6 +38,7 @@ library:
 default-extensions:
 - DeriveGeneric
 - DerivingStrategies
+- FlexibleContexts
 - GeneralizedNewtypeDeriving
 - LambdaCase
 - NoImplicitPrelude

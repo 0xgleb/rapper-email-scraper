@@ -21,7 +21,7 @@ import qualified Text.Regex.Quote  as Regex
 import qualified Web.Twitter.Types as Twitter
 
 
-extractEmails :: [Twitter.Status] -> IO ()
+extractEmails :: MonadIO m => [Twitter.Status] -> m ()
 extractEmails feed = do
   let tweets = feed <&> \Twitter.Status{..} ->
         (statusId, statusText)
@@ -33,11 +33,11 @@ extractEmails feed = do
 
       filePath = "rapper-emails.txt"
 
-  fileExists <- Dir.doesFileExist filePath
+  fileExists <- liftIO $ Dir.doesFileExist filePath
 
   savedEmails <-
     if fileExists
-    then fmap Email . Txt.lines <$> readFile filePath
+    then liftIO $ fmap Email . Txt.lines <$> readFile filePath
     else pure []
 
   emails <-
@@ -52,7 +52,7 @@ extractEmails feed = do
 
 
   void $ forM (filter (not . flip elem savedEmails) emails) $ \(Email email) ->
-    appendFile filePath $ email <> "\n"
+    liftIO $ appendFile filePath $ email <> "\n"
 
 
 newtype Email
