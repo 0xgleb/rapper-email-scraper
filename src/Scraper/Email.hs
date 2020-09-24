@@ -24,12 +24,14 @@ import qualified Web.Twitter.Types as Twitter
 extractEmails :: MonadIO m => [Twitter.Status] -> m ()
 extractEmails feed = do
   let tweets = feed <&> \Twitter.Status{..} ->
-        (statusId, statusText)
+        (statusId, statusText, statusTruncated)
 
       maybeEmails
         = removeDuplicateEmails
-        $ zipWith (\(id, text) email -> (id, text, email)) tweets
-        $ findEmailInText . snd <$> tweets
+        $ zipWith
+            (\(id, text, truncated) email -> (id, text, truncated, email))
+            tweets
+        $ findEmailInText . (\(_, txt, _) -> txt) <$> tweets
 
       filePath = "rapper-emails.txt"
 
@@ -40,16 +42,22 @@ extractEmails feed = do
     then liftIO $ fmap Email . Txt.lines <$> readFile filePath
     else pure []
 
-  emails <-
-    (\accumulator -> foldM accumulator [] maybeEmails) $ \accumulated -> \case
-      (_, _, Just email) ->
-        pure $ email : accumulated
+  let foldOverEmails accumulator
+        = foldl accumulator ([], []) maybeEmails
 
-      (statusId, tweetText, Nothing) -> do
-        saveUnmatchedTweet UnmatchedTweet{..}
+      (emails, truncatedTweets)
+        = foldOverEmails $ \accumulated -> \case
+            (_, _, _, Just email) ->
+              (email : fst accumulated, snd accumulated)
 
-        pure accumulated
+            (statusId, tweetText, truncated, Nothing) ->
+              ( fst accumulated
+              , if truncated
+                then UnmatchedTweet{..} : snd accumulated
+                else snd accumulated
+              )
 
+  saveUnmatchedTweet truncatedTweets
 
   void $ forM (filter (not . flip elem savedEmails) emails) $ \(Email email) ->
     liftIO $ appendFile filePath $ email <> "\n"

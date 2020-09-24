@@ -18,7 +18,7 @@ import qualified Data.Text            as Txt
 import qualified System.Directory     as Dir
 import qualified Web.Twitter.Types    as Twitter
 
-saveUnmatchedTweet :: MonadIO m => UnmatchedTweet -> m ()
+saveUnmatchedTweet :: MonadIO m => [UnmatchedTweet] -> m ()
 saveUnmatchedTweet unmatchedTweets = do
   let filePath = "unmatched-tweets.json"
 
@@ -40,7 +40,7 @@ saveUnmatchedTweet unmatchedTweets = do
 
   liftIO
     $ BSL.writeFile filePath $ Aeson.encode
-    $ SavedTweets $ savedTweets <> [unmatchedTweets]
+    $ SavedTweets $ savedTweets <> unmatchedTweets
 
 data UnmatchedTweet
   = UnmatchedTweet

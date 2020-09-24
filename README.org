@@ -9,8 +9,8 @@
 - [X] Implement tweet count
 - [X] Save tweets without emails into a separate JSON file
 - [X] Move session data into MonadReader
-- [ ] Only save truncated tweets (and rename things accordingly)
-- [ ] Batch truncated tweet saving
+- [X] Batch truncated tweet saving
+- [X] Only save truncated tweets (and rename things accordingly)
 - [ ] Implement runtime error handling + automatic restarting
 - [ ] Return max_id from the Haskell binary
 - [ ] Change the shell script to write the new max_id into an environment variable
