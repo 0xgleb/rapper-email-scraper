@@ -25,6 +25,9 @@ scrapeRapperEmails = do
 
   extractEmails statuses
 
+  putStrLn @Text "Request processing complete. Email search and extraction completed."
+  putStrLn @Text $ "I have processed " <> show (length statuses) <> " tweets in total"
+
   proceedIfNotEmpty statuses $ \Twitter.Status{..} ->
     scrapeNext ScrapeNextRequest
       { requestCount = RequestCount 2
@@ -104,7 +107,7 @@ proceedIfNotEmpty
 proceedIfNotEmpty statuses nextAction
   = case headMay $ sortOn Twitter.statusId statuses of
       Nothing ->
-        putStrLn @Text "Twitter API returned no tweets for this request. End of scraping."
+        putStrLn @Text "\nTwitter API returned no tweets for this request. End of scraping."
 
       Just status -> do
         putStrLn @Text ""
