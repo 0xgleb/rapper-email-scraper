@@ -8,7 +8,9 @@
 - [X] Implement recursive page call and ensure that current max_id gets logged in case you reach the limit
 - [X] Implement tweet count
 - [X] Save tweets without emails into a separate JSON file
-- [ ] Move session data into MonadReader
+- [X] Move session data into MonadReader
+- [ ] Only save truncated tweets (and rename things accordingly)
+- [ ] Batch truncated tweet saving
 - [ ] Implement runtime error handling + automatic restarting
 - [ ] Return max_id from the Haskell binary
 - [ ] Change the shell script to write the new max_id into an environment variable

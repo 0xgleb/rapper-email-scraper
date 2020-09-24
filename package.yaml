@@ -31,14 +31,17 @@ dependencies:
 - text
 - twitter-conduit
 - twitter-types
+- unordered-containers
 
 library:
   source-dirs: src
 
 default-extensions:
+- DeriveAnyClass
 - DeriveGeneric
 - DerivingStrategies
 - FlexibleContexts
+- FlexibleInstances
 - GeneralizedNewtypeDeriving
 - LambdaCase
 - NoImplicitPrelude
@@ -46,6 +49,7 @@ default-extensions:
 - QuasiQuotes
 - RecordWildCards
 - ScopedTypeVariables
+- StandaloneDeriving
 - TypeApplications
 
 ghc-options:
@@ -84,3 +88,5 @@ tests:
     - rapper-mail-scraper
     - hspec
     - QuickCheck
+    - generic-random
+    - quickcheck-text

@@ -13,6 +13,6 @@ removeDuplicateEmails
 removeDuplicates :: Eq eq => (a -> eq) -> [a] -> [a]
 removeDuplicates func = \case
   (x:xs) ->
-    x : filter (\el -> func el /= func x) xs
+    x : removeDuplicates func (filter (\el -> func el /= func x) xs)
 
   [] -> []
