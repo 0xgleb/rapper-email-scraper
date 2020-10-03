@@ -1,5 +1,6 @@
 module Scraper
-  ( scrapeRapperEmails
+  ( ScraperContext(..)
+  , scrapeRapperEmails
   )
   where
 
@@ -9,20 +10,26 @@ import User
 
 import Protolude
 
+import qualified Data.Generics.Product                as GLens
 import qualified Web.Twitter.Conduit                  as Twitter
 import qualified Web.Twitter.Conduit.Request.Internal as Twitter
-import qualified Web.Twitter.Conduit.Status           as Twitter
 import qualified Web.Twitter.Types                    as Twitter
+-- import qualified Web.Twitter.Conduit.Status           as Twitter
 
+data ScraperContext
+  = ScraperContext
+      { session          :: !Session
+      , userId           :: !Twitter.UserId
+      , targetTweetCount :: !TargetTweetCount
+      }
+  deriving stock (Generic)
 
-scrapeRapperEmails :: (MonadReader Session m, MonadIO m) => TargetTweetCount -> m ()
-scrapeRapperEmails targetTweetCount
+scrapeRapperEmails :: (MonadReader ScraperContext m, MonadIO m) => m ()
+scrapeRapperEmails
   = scrape ScrapeNextRequest
       { requestCount = RequestCount 1
       , mbMaxId      = Nothing
       , tweetCount   = ProcessedTweetCount 0
-
-      , targetTweetCount
       }
 
 
@@ -36,13 +43,12 @@ newtype RequestCount
 
 data ScrapeNextRequest
   = ScrapeNextRequest
-      { requestCount     :: RequestCount
-      , mbMaxId          :: Maybe Twitter.StatusId
-      , tweetCount       :: ProcessedTweetCount
-      , targetTweetCount :: TargetTweetCount
+      { requestCount :: RequestCount
+      , mbMaxId      :: Maybe Twitter.StatusId
+      , tweetCount   :: ProcessedTweetCount
       }
 
-scrape :: (MonadReader Session m, MonadIO m) => ScrapeNextRequest -> m ()
+scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
 scrape ScrapeNextRequest{..} = do
   putStrLn @Text
     $  "Starting request #" <> show requestCount
@@ -50,7 +56,11 @@ scrape ScrapeNextRequest{..} = do
          Just maxId -> " with max_id=" <> show maxId
          Nothing    -> ""
 
-  statuses <- call nextQuery
+  Twitter.SearchResult{..} <- call nextQuery
+
+  let statuses                   = searchResultStatuses
+      Twitter.SearchMetadata{..} = searchResultSearchMetadata
+
 
   let currentTweetCount = ProcessedTweetCount (toInteger $ length statuses)
       processedTweetCount = tweetCount + currentTweetCount
@@ -66,8 +76,6 @@ scrape ScrapeNextRequest{..} = do
       { requestCount = requestCount + 1
       , tweetCount   = processedTweetCount
       , mbMaxId      = Just $ statusId - 1
-
-      , targetTweetCount
       }
 
   where
@@ -75,30 +83,36 @@ scrape ScrapeNextRequest{..} = do
 
     params = case mbMaxId of
       Nothing    -> _params
-      Just maxId ->
-        ("max_id", Twitter.PVInteger maxId) : _params
+      Just maxId -> ("max_id", Twitter.PVInteger maxId) : _params
 
     nextQuery
       = searchQuery { Twitter._params = params }
 
 
-searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
-searchQuery = query
-  { Twitter._params = ("count", Twitter.PVInteger 200) : Twitter._params query }
+searchQuery :: Twitter.APIRequest Twitter.SearchTweets (Twitter.SearchResult [Twitter.Status])
+searchQuery
+  = Twitter.searchTweets "(from:SendBeatsBot) -filter:replies"
 
-  where
-    query = Twitter.userTimeline sendBeatsBotHandle
+
+-- searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
+-- searchQuery = query
+--   { Twitter._params = ("count", Twitter.PVInteger 200) : Twitter._params query }
+
+--   where
+--     query = Twitter.userTimeline sendBeatsBotHandle
 
 
 data ProceedRequest
   = ProceedRequest
       { processedTweetCount :: ProcessedTweetCount
-      , targetTweetCount    :: TargetTweetCount
       , statuses            :: [Twitter.Status]
       }
 
 proceedIfNotEmpty
-  :: MonadIO m
+  :: ( MonadIO m
+     , MonadReader context m
+     , TargetTweetCount `GLens.HasType` context
+     )
   => ProceedRequest
   -> (Twitter.Status -> m ())
   -> m ()
@@ -108,6 +122,8 @@ proceedIfNotEmpty ProceedRequest{..} nextAction
       Nothing -> do
         putStrLn @Text
           "\nTwitter API returned no tweets for this request. End of scraping.\n"
+
+        targetTweetCount <- GLens.getTyped @TargetTweetCount <$> ask
 
         when (show @_ @Text processedTweetCount /= show targetTweetCount)
           $ putStrLn @Text "WARNING!"

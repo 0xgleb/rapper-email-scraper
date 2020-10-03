@@ -10,7 +10,9 @@ import User
 import Protolude
 
 run :: IO ()
-run = (createSession >>=) $ runReaderT $ do
-  targetTweetCount <- getUserData
+run = do
+  session <- createSession
 
-  scrapeRapperEmails targetTweetCount
+  (userId, targetTweetCount) <- runReaderT getUserData session
+
+  runReaderT scrapeRapperEmails ScraperContext{..}

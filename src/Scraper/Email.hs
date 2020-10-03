@@ -14,15 +14,28 @@ import Control.Lens
 import Protolude
 import Text.Regex.Posix (Regex)
 
-import qualified Data.Text         as Txt
-import qualified System.Directory  as Dir
-import qualified Text.Regex.Lens   as Regex
-import qualified Text.Regex.Quote  as Regex
-import qualified Web.Twitter.Types as Twitter
+import qualified Data.Generics.Product as GLens
+import qualified Data.Text             as Txt
+import qualified System.Directory      as Dir
+import qualified Text.Regex.Lens       as Regex
+import qualified Text.Regex.Quote      as Regex
+import qualified Web.Twitter.Types     as Twitter
 
 
-extractEmails :: MonadIO m => [Twitter.Status] -> m ()
+extractEmails
+  :: ( MonadIO m
+     , MonadReader context m
+     , Twitter.UserId `GLens.HasType` context
+     )
+  => [Twitter.Status]
+  -> m ()
+
 extractEmails feed = do
+  userId <- GLens.getTyped <$> ask
+
+  when (any ((/= userId) . Twitter.userId . Twitter.statusUser) feed)
+    $ putStrLn @Text "\nWARNING: Some fetched tweets don't match the user!\n"
+
   let tweets = feed <&> \Twitter.Status{..} ->
         (statusId, statusText, statusTruncated)
 

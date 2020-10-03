@@ -25,6 +25,7 @@ dependencies:
 - data-default
 - directory
 - extra
+- generic-lens
 - lens
 - lens-regex
 - protolude
@@ -54,6 +55,7 @@ default-extensions:
 - ScopedTypeVariables
 - StandaloneDeriving
 - TypeApplications
+- TypeOperators
 
 ghc-options:
 - -freverse-errors

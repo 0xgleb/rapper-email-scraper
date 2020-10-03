@@ -9,6 +9,7 @@ import Protolude
 
 import qualified Control.Exception        as Exception
 import qualified Data.Default             as Default
+import qualified Data.Generics.Product    as G.P
 import qualified System.Environment       as Env
 import qualified System.Time.Extra        as Extra
 import qualified Web.Twitter.Conduit      as Twitter
@@ -17,8 +18,8 @@ import qualified Web.Twitter.Conduit.Base as Twitter
 
 data Session
   = Session
-      { manager :: Twitter.Manager
-      , twInfo  :: Twitter.TWInfo
+      { manager :: !Twitter.Manager
+      , twInfo  :: !Twitter.TWInfo
       }
 
 createSession :: IO Session
@@ -63,7 +64,8 @@ getTwitterEnvVars = do
   pure TwitterAuthentication{..}
 
 call
-  :: ( MonadReader Session m
+  :: ( MonadReader context m
+     , Session `G.P.HasType` context
      , MonadIO m
      , Twitter.ResponseBodyType responseType
      )
@@ -71,7 +73,7 @@ call
   -> m responseType
 
 call query = do
-  Session{..} <- ask
+  Session{..} <- G.P.getTyped <$> ask
 
   let authedCall = Twitter.call twInfo manager query
 
