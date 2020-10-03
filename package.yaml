@@ -42,6 +42,7 @@ default-extensions:
 - DeriveAnyClass
 - DeriveGeneric
 - DerivingStrategies
+- DerivingVia
 - DuplicateRecordFields
 - FlexibleContexts
 - FlexibleInstances

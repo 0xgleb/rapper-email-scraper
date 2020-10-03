@@ -50,14 +50,18 @@ data ScrapeNextRequest
 
 scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
 scrape ScrapeNextRequest{..} = do
-  putStrLn @Text
-    $  "Starting request #" <> show requestCount
+  putStrLn @Text $ "Starting request #" <> show requestCount
 
   SearchResults{..} <- call nextQuery
 
-  let currentTweetCount = ProcessedTweetCount (toInteger $ length results)
+  let currentTweetCount   = ProcessedTweetCount (toInteger $ length results)
       processedTweetCount = tweetCount + currentTweetCount
-  putStrLn @Text $ "Received " <> show currentTweetCount <> " tweets"
+
+      minimumId = minimum $ id <$> results
+
+  putStrLn @Text
+    $  "Received " <> show currentTweetCount
+    <> " tweets with the lowest id=" <> show minimumId
 
   extractEmails results
 
@@ -89,7 +93,10 @@ searchQuery
   = Twitter.APIRequest
       { _method = "GET"
       , _url    = "https://api.twitter.com/1.1/tweets/search/fullarchive/prod.json"
-      , _params = [("query", Twitter.PVString "(from:SendBeatsBot)")]
+      , _params =
+          [ ("query", Twitter.PVString "(from:SendBeatsBot)")
+          , ("fromDate", Twitter.PVString "201207220000")
+          ]
       }
 
 
@@ -97,12 +104,14 @@ data ProceedRequest
   = ProceedRequest
       { processedTweetCount :: ProcessedTweetCount
       , next                :: Maybe NextPageToken
+      , minimumId           :: Twitter.StatusId
       }
 
 proceedIfNotEmpty
   :: ( MonadIO m
      , MonadReader context m
      , TargetTweetCount `GLens.HasType` context
+     , Session `GLens.HasType` context
      )
   => ProceedRequest
   -> (NextPageToken -> m ())
@@ -122,6 +131,11 @@ proceedIfNotEmpty ProceedRequest{..} nextAction
         putStrLn @Text
           $  "Target tweet count was " <> show targetTweetCount <> ".\n"
           <> "I processed " <> show processedTweetCount <> ".\n"
+
+        Twitter.Status{..} <- call $ Twitter.statusesShowId minimumId
+
+        putStrLn @Text
+          $ "Oldest processed tweet was created at " <> show statusCreatedAt
 
       Just nextPageToken -> do
         putStrLn @Text ""

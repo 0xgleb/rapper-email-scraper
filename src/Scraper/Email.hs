@@ -29,16 +29,11 @@ extractEmails
      , MonadReader context m
      , Twitter.UserId `GLens.HasType` context
      )
-  => [Result]
+  => [Tweet]
   -> m ()
 
-extractEmails results = do
+extractEmails tweets = do
   userId <- GLens.getTyped <$> ask
-
-  let tweets = flattenResults results
-
-  putStrLn @Text
-    $  "Found " <> show (length tweets) <> " retweets"
 
   let filterFunc = (/= userId) . Twitter.userId . GLens.getTyped
   when (any filterFunc tweets)
@@ -50,9 +45,9 @@ extractEmails results = do
   let maybeEmails
         = removeDuplicateEmails
         $ zipWith
-            (\FlatTweet{..} email -> (id, text, truncated, email))
+            (\Tweet{..} email -> (id, text, truncated, email))
             tweets
-        $ findEmailInText . (\FlatTweet{..} -> text) <$> tweets
+        $ findEmailInText . (\Tweet{..} -> text) <$> tweets
 
       filePath = "rapper-emails.txt"
 
