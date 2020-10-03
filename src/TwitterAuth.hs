@@ -1,14 +1,18 @@
 module TwitterAuth
-  ( Session(..)
+  ( Session
   , createSession
+  , call
   )
   where
 
 import Protolude
 
-import qualified Data.Default        as Default
-import qualified System.Environment  as Env
-import qualified Web.Twitter.Conduit as Twitter
+import qualified Control.Exception        as Exception
+import qualified Data.Default             as Default
+import qualified System.Environment       as Env
+import qualified System.Time.Extra        as Extra
+import qualified Web.Twitter.Conduit      as Twitter
+import qualified Web.Twitter.Conduit.Base as Twitter
 
 
 data Session
@@ -57,3 +61,29 @@ getTwitterEnvVars = do
   accessSecret   <- getEnv "OAUTH_ACCESS_TOKEN_SECRET"
 
   pure TwitterAuthentication{..}
+
+call
+  :: ( MonadReader Session m
+     , MonadIO m
+     , Twitter.ResponseBodyType responseType
+     )
+  => Twitter.APIRequest apiName responseType
+  -> m responseType
+
+call query = do
+  Session{..} <- ask
+
+  let authedCall = Twitter.call twInfo manager query
+
+  liftIO $ Exception.catch authedCall $ \(exception :: Exception.IOException) -> do
+    print exception
+
+    putStrLn @Text
+      "I'm guessing that the Twitter rate limit was hit. \
+      \I'll wait for 15 minutes and try again."
+
+    Extra.sleep $ 15 * 60
+
+    putStrLn @Text "Trying to perform the call again"
+
+    authedCall

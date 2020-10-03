@@ -24,6 +24,7 @@ dependencies:
 - bytestring
 - data-default
 - directory
+- extra
 - lens
 - lens-regex
 - protolude
@@ -40,10 +41,12 @@ default-extensions:
 - DeriveAnyClass
 - DeriveGeneric
 - DerivingStrategies
+- DuplicateRecordFields
 - FlexibleContexts
 - FlexibleInstances
 - GeneralizedNewtypeDeriving
 - LambdaCase
+- NamedFieldPuns
 - NoImplicitPrelude
 - OverloadedStrings
 - QuasiQuotes

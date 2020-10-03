@@ -5,11 +5,12 @@ module Bot
 
 import Scraper
 import TwitterAuth
+import User
 
 import Protolude
 
 run :: IO ()
-run = do
-  session <- createSession
+run = (createSession >>=) $ runReaderT $ do
+  targetTweetCount <- getUserData
 
-  runReaderT scrapeRapperEmails session
+  scrapeRapperEmails targetTweetCount

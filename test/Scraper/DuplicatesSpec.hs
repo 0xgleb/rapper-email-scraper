@@ -26,11 +26,8 @@ spec = do
       removeDuplicates identity (removeDuplicates identity randomList)
         == removeDuplicates identity randomList
 
-    it "removes duplicates" $ property $ \firstListRaw secondListRaw ->
+    it "removes duplicates" $ property $ \firstList secondList ->
       let duplicate n = (n :: Int, "duplicate" :: Prelude.String)
-
-          firstList  = removeDuplicates snd firstListRaw
-          secondList = removeDuplicates snd secondListRaw
 
           firstItem = (1, "")
 
@@ -41,11 +38,10 @@ spec = do
             <> secondList
             <> [duplicate 4]
 
-          removeFirstItem = filter ((/= "") . snd)
-
           withoutDuplicates
-            = firstItem
+            = removeDuplicates snd
+            $ firstItem
             : duplicate 1
-            : removeFirstItem (firstList <> secondList)
+            : firstList <> secondList
 
       in removeDuplicates snd randomList `shouldBe` withoutDuplicates
