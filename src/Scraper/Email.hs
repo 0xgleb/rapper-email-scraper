@@ -8,7 +8,9 @@ module Scraper.Email
   where
 
 import Scraper.Duplicates
+import Scraper.SearchResult
 import Scraper.Unmatched
+import Util
 
 import Control.Lens
 import Protolude
@@ -27,24 +29,30 @@ extractEmails
      , MonadReader context m
      , Twitter.UserId `GLens.HasType` context
      )
-  => [Twitter.Status]
+  => [Result]
   -> m ()
 
-extractEmails feed = do
+extractEmails results = do
   userId <- GLens.getTyped <$> ask
 
-  when (any ((/= userId) . Twitter.userId . Twitter.statusUser) feed)
-    $ putStrLn @Text "\nWARNING: Some fetched tweets don't match the user!\n"
+  let tweets = flattenResults results
 
-  let tweets = feed <&> \Twitter.Status{..} ->
-        (statusId, statusText, statusTruncated)
+  putStrLn @Text
+    $  "Found " <> show (length tweets) <> " retweets"
 
-      maybeEmails
+  let filterFunc = (/= userId) . Twitter.userId . GLens.getTyped
+  when (any filterFunc tweets)
+    $ putStrLn @Text
+        $  "\nWARNING: "
+        <> show (length $ filter filterFunc tweets)
+        <> " fetched tweets don't match the user!\n"
+
+  let maybeEmails
         = removeDuplicateEmails
         $ zipWith
-            (\(id, text, truncated) email -> (id, text, truncated, email))
+            (\FlatTweet{..} email -> (id, text, truncated, email))
             tweets
-        $ findEmailInText . (\(_, txt, _) -> txt) <$> tweets
+        $ findEmailInText . (\FlatTweet{..} -> text) <$> tweets
 
       filePath = "rapper-emails.txt"
 
@@ -55,11 +63,8 @@ extractEmails feed = do
     then liftIO $ fmap Email . Txt.lines <$> readFile filePath
     else pure []
 
-  let foldOverEmails accumulator
-        = foldl accumulator ([], []) maybeEmails
-
-      (emails, truncatedTweets)
-        = foldOverEmails $ \accumulated -> \case
+  let (emails, truncatedTweets)
+        = flipFoldl ([], []) maybeEmails $ \accumulated -> \case
             (_, _, _, Just email) ->
               (email : fst accumulated, snd accumulated)
 

@@ -84,7 +84,7 @@ call query = do
       "I'm guessing that the Twitter rate limit was hit. \
       \I'll wait for 15 minutes and try again."
 
-    Extra.sleep $ 15 * 60
+    Extra.sleep $ 60
 
     putStrLn @Text "Trying to perform the call again"
 

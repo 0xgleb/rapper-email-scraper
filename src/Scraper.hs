@@ -5,6 +5,7 @@ module Scraper
   where
 
 import Scraper.Email
+import Scraper.SearchResult
 import TwitterAuth
 import User
 
@@ -14,7 +15,6 @@ import qualified Data.Generics.Product                as GLens
 import qualified Web.Twitter.Conduit                  as Twitter
 import qualified Web.Twitter.Conduit.Request.Internal as Twitter
 import qualified Web.Twitter.Types                    as Twitter
--- import qualified Web.Twitter.Conduit.Status           as Twitter
 
 data ScraperContext
   = ScraperContext
@@ -28,8 +28,8 @@ scrapeRapperEmails :: (MonadReader ScraperContext m, MonadIO m) => m ()
 scrapeRapperEmails
   = scrape ScrapeNextRequest
       { requestCount = RequestCount 1
-      , mbMaxId      = Nothing
       , tweetCount   = ProcessedTweetCount 0
+      , nextToken    = Nothing
       }
 
 
@@ -44,68 +44,59 @@ newtype RequestCount
 data ScrapeNextRequest
   = ScrapeNextRequest
       { requestCount :: RequestCount
-      , mbMaxId      :: Maybe Twitter.StatusId
       , tweetCount   :: ProcessedTweetCount
+      , nextToken    :: Maybe NextPageToken
       }
 
 scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
 scrape ScrapeNextRequest{..} = do
   putStrLn @Text
     $  "Starting request #" <> show requestCount
-    <> case mbMaxId of
-         Just maxId -> " with max_id=" <> show maxId
-         Nothing    -> ""
 
-  Twitter.SearchResult{..} <- call nextQuery
+  SearchResults{..} <- call nextQuery
 
-  let statuses                   = searchResultStatuses
-      Twitter.SearchMetadata{..} = searchResultSearchMetadata
-
-
-  let currentTweetCount = ProcessedTweetCount (toInteger $ length statuses)
+  let currentTweetCount = ProcessedTweetCount (toInteger $ length results)
       processedTweetCount = tweetCount + currentTweetCount
   putStrLn @Text $ "Received " <> show currentTweetCount <> " tweets"
 
-  extractEmails statuses
+  extractEmails results
 
   putStrLn @Text "Request processing complete. Email search and extraction completed."
   putStrLn @Text $ "I have processed " <> show processedTweetCount <> " tweets in total"
 
-  proceedIfNotEmpty ProceedRequest{..} $ \Twitter.Status{..} ->
+  proceedIfNotEmpty ProceedRequest{..} $ \token ->
     scrape ScrapeNextRequest
       { requestCount = requestCount + 1
       , tweetCount   = processedTweetCount
-      , mbMaxId      = Just $ statusId - 1
+      , nextToken    = Just token
       }
 
   where
     Twitter.APIRequest{..} = searchQuery
 
-    params = case mbMaxId of
+    params = case nextToken of
       Nothing    -> _params
-      Just maxId -> ("max_id", Twitter.PVInteger maxId) : _params
+      Just token ->
+        ("next", Twitter.PVString $ getNextPageToken token) : _params
 
     nextQuery
       = searchQuery { Twitter._params = params }
 
 
-searchQuery :: Twitter.APIRequest Twitter.SearchTweets (Twitter.SearchResult [Twitter.Status])
+
+searchQuery :: Twitter.APIRequest Twitter.SearchTweets SearchResults
 searchQuery
-  = Twitter.searchTweets "(from:SendBeatsBot) -filter:replies"
-
-
--- searchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
--- searchQuery = query
---   { Twitter._params = ("count", Twitter.PVInteger 200) : Twitter._params query }
-
---   where
---     query = Twitter.userTimeline sendBeatsBotHandle
+  = Twitter.APIRequest
+      { _method = "GET"
+      , _url    = "https://api.twitter.com/1.1/tweets/search/fullarchive/prod.json"
+      , _params = [("query", Twitter.PVString "(from:SendBeatsBot)")]
+      }
 
 
 data ProceedRequest
   = ProceedRequest
       { processedTweetCount :: ProcessedTweetCount
-      , statuses            :: [Twitter.Status]
+      , next                :: Maybe NextPageToken
       }
 
 proceedIfNotEmpty
@@ -114,11 +105,11 @@ proceedIfNotEmpty
      , TargetTweetCount `GLens.HasType` context
      )
   => ProceedRequest
-  -> (Twitter.Status -> m ())
+  -> (NextPageToken -> m ())
   -> m ()
 
 proceedIfNotEmpty ProceedRequest{..} nextAction
-  = case headMay $ sortOn Twitter.statusId statuses of
+  = case next of
       Nothing -> do
         putStrLn @Text
           "\nTwitter API returned no tweets for this request. End of scraping.\n"
@@ -132,6 +123,6 @@ proceedIfNotEmpty ProceedRequest{..} nextAction
           $  "Target tweet count was " <> show targetTweetCount <> ".\n"
           <> "I processed " <> show processedTweetCount <> ".\n"
 
-      Just status -> do
+      Just nextPageToken -> do
         putStrLn @Text ""
-        nextAction status
+        nextAction nextPageToken
