@@ -8,10 +8,12 @@ import Scraper.Email
 import Scraper.SearchResult
 import TwitterAuth
 import User
+import Util
 
 import Protolude
 
 import qualified Data.Generics.Product                as GLens
+import qualified Data.Time                            as Time
 import qualified Web.Twitter.Conduit                  as Twitter
 import qualified Web.Twitter.Conduit.Request.Internal as Twitter
 import qualified Web.Twitter.Types                    as Twitter
@@ -24,13 +26,23 @@ data ScraperContext
       }
   deriving stock (Generic)
 
-scrapeRapperEmails :: (MonadReader ScraperContext m, MonadIO m) => m ()
 scrapeRapperEmails
-  = scrape ScrapeNextRequest
-      { requestCount = RequestCount 1
-      , tweetCount   = ProcessedTweetCount 0
-      , nextToken    = Nothing
-      }
+  :: ( MonadReader ScraperContext m
+     , MonadIO m
+     )
+  => Maybe Twitter.StatusId
+  -> m ()
+
+scrapeRapperEmails oldestProcessedId = do
+  toDate <- forM oldestProcessedId $
+    fmap Twitter.statusCreatedAt . call . Twitter.statusesShowId
+
+  scrape ScrapeNextRequest
+    { requestCount = RequestCount 1
+    , tweetCount   = ProcessedTweetCount 0
+    , nextToken    = Nothing
+    , toDate
+    }
 
 
 newtype ProcessedTweetCount
@@ -46,6 +58,7 @@ data ScrapeNextRequest
       { requestCount :: RequestCount
       , tweetCount   :: ProcessedTweetCount
       , nextToken    :: Maybe NextPageToken
+      , toDate       :: Maybe Time.UTCTime
       }
 
 scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
@@ -73,18 +86,20 @@ scrape ScrapeNextRequest{..} = do
       { requestCount = requestCount + 1
       , tweetCount   = processedTweetCount
       , nextToken    = Just token
+      , toDate       = Nothing
       }
 
   where
     Twitter.APIRequest{..} = searchQuery
 
-    params = case nextToken of
-      Nothing    -> _params
-      Just token ->
-        ("next", Twitter.PVString $ getNextPageToken token) : _params
+    nextParam = toList $ nextToken <&> \token ->
+      ("next", Twitter.PVString $ getNextPageToken token)
 
-    nextQuery
-      = searchQuery { Twitter._params = params }
+    toDateParam = toList $ toDate <&> \date ->
+      ("toDate", Twitter.PVString $ dayToTwitterTime date)
+
+    nextQuery = searchQuery
+      { Twitter._params = _params <> nextParam <> toDateParam }
 
 
 

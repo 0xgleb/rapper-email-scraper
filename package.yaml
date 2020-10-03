@@ -31,6 +31,7 @@ dependencies:
 - protolude
 - regex-posix
 - text
+- time
 - twitter-conduit
 - twitter-types
 - unordered-containers

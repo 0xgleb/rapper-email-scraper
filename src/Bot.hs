@@ -15,4 +15,4 @@ run = do
 
   (userId, targetTweetCount) <- runReaderT getUserData session
 
-  runReaderT scrapeRapperEmails ScraperContext{..}
+  runReaderT (scrapeRapperEmails $ Just 1269389661438242816) ScraperContext{..}
