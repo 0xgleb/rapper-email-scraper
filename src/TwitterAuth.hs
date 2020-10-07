@@ -66,11 +66,11 @@ getTwitterEnvVars = do
 call
   :: ( MonadReader context m
      , Session `G.P.HasType` context
+     , Twitter.ResponseBodyType response
      , MonadIO m
-     , Twitter.ResponseBodyType responseType
      )
-  => Twitter.APIRequest apiName responseType
-  -> m responseType
+  => Twitter.APIRequest apiName response
+  -> m response
 
 call query = do
   Session{..} <- G.P.getTyped <$> ask
@@ -84,7 +84,7 @@ call query = do
       "I'm guessing that the Twitter rate limit was hit. \
       \I'll wait for 15 minutes and try again."
 
-    Extra.sleep $ 60
+    Extra.sleep 60
 
     putStrLn @Text "Trying to perform the call again"
 

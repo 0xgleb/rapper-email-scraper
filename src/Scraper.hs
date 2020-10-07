@@ -1,5 +1,6 @@
 module Scraper
   ( ScraperContext(..)
+  , TweetId(..)
   , scrapeRapperEmails
   )
   where
@@ -26,16 +27,19 @@ data ScraperContext
       }
   deriving stock (Generic)
 
+newtype TweetId
+  = TweetId { getTweetId :: Twitter.StatusId }
+
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , MonadIO m
      )
-  => Maybe Twitter.StatusId
+  => Maybe TweetId
   -> m ()
 
 scrapeRapperEmails oldestProcessedId = do
   toDate <- forM oldestProcessedId $
-    fmap Twitter.statusCreatedAt . call . Twitter.statusesShowId
+    fmap Twitter.statusCreatedAt . call . Twitter.statusesShowId . getTweetId
 
   scrape ScrapeNextRequest
     { requestCount = RequestCount 1
@@ -110,7 +114,8 @@ searchQuery
       , _url    = "https://api.twitter.com/1.1/tweets/search/fullarchive/prod.json"
       , _params =
           [ ("query", Twitter.PVString "(from:SendBeatsBot)")
-          , ("fromDate", Twitter.PVString "201207220000")
+          , ("fromDate", Twitter.PVString "201607220000")
+          , ("maxResults", Twitter.PVInteger 500)
           ]
       }
 
