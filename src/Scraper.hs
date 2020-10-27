@@ -17,6 +17,7 @@ import qualified Data.Generics.Product                as GLens
 import qualified Data.Time                            as Time
 import qualified Web.Twitter.Conduit                  as Twitter
 import qualified Web.Twitter.Conduit.Request.Internal as Twitter
+import qualified Web.Twitter.Conduit.Status           as Twitter
 import qualified Web.Twitter.Types                    as Twitter
 
 data ScraperContext
@@ -57,12 +58,17 @@ newtype RequestCount
   = RequestCount Integer
   deriving newtype (Show, Num)
 
+data Mode
+  = Free
+  | Premium
+
 data ScrapeNextRequest
   = ScrapeNextRequest
       { requestCount :: RequestCount
       , tweetCount   :: ProcessedTweetCount
       , nextToken    :: Maybe NextPageToken
       , toDate       :: Maybe Time.UTCTime
+      , mode         :: Mode
       }
 
 scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
@@ -91,6 +97,7 @@ scrape ScrapeNextRequest{..} = do
       , tweetCount   = processedTweetCount
       , nextToken    = Just token
       , toDate       = Nothing
+      , mode
       }
 
   where
@@ -102,13 +109,23 @@ scrape ScrapeNextRequest{..} = do
     toDateParam = toList $ toDate <&> \date ->
       ("toDate", Twitter.PVString $ dayToTwitterTime date)
 
-    nextQuery = searchQuery
-      { Twitter._params = _params <> nextParam <> toDateParam }
+    nextQuery = case mode of
+      Premium ->
+        premiumSearchQuery
+          { Twitter._params = _params <> nextParam <> toDateParam }
 
+      Free ->
+        freeSearchQuery
 
+freeSearchQuery :: Twitter.APIRequest Twitter.StatusesUserTimeline [Twitter.Status]
+freeSearchQuery = query
+  { Twitter._params = ("count", Twitter.PVInteger 200) : Twitter._params query }
 
-searchQuery :: Twitter.APIRequest Twitter.SearchTweets SearchResults
-searchQuery
+  where
+    query = Twitter.userTimeline sendBeatsBotHandle
+
+premiumSearchQuery :: Twitter.APIRequest Twitter.SearchTweets SearchResults
+premiumSearchQuery
   = Twitter.APIRequest
       { _method = "GET"
       , _url    = "https://api.twitter.com/1.1/tweets/search/fullarchive/prod.json"
