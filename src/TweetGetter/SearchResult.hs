@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Scraper.SearchResult
+module TweetGetter.SearchResult
   ( SearchResults(..)
   , NextPageToken(..)
   , Tweet(..)

@@ -1,6 +1,6 @@
-module Scraper.SearchResultSpec (spec) where
+module TweetGetter.SearchResultSpec (spec) where
 
-import Scraper.SearchResult
+import TweetGetter.SearchResult
 
 import Protolude
 import Test.Hspec

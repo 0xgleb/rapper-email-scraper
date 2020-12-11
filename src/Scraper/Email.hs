@@ -8,8 +8,8 @@ module Scraper.Email
   where
 
 import Scraper.Duplicates
-import Scraper.SearchResult
 import Scraper.Unmatched
+import TweetGetter.SearchResult
 import Util
 
 import Control.Lens
