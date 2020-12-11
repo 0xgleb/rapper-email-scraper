@@ -4,6 +4,7 @@ module Bot
   where
 
 import Scraper
+import TweetGetter
 import TwitterAuth
 import User
 
@@ -15,5 +16,7 @@ run = do
 
   (userId, targetTweetCount) <- runReaderT getUserData session
 
-  runReaderT (scrapeRapperEmails Nothing)
+  let mode = Free $ FreeSearch Nothing
+
+  runReaderT (scrapeRapperEmails mode Nothing)
     ScraperContext{..}

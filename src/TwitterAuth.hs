@@ -1,6 +1,7 @@
 module TwitterAuth
   ( Session
   , createSession
+  , HasTwitterAuth
   , call
   )
   where
@@ -63,9 +64,14 @@ getTwitterEnvVars = do
 
   pure TwitterAuthentication{..}
 
+
+type HasTwitterAuth context m
+  = ( MonadReader context m
+    , Session `G.P.HasType` context
+    )
+
 call
-  :: ( MonadReader context m
-     , Session `G.P.HasType` context
+  :: ( HasTwitterAuth context m
      , Twitter.ResponseBodyType response
      , MonadIO m
      )

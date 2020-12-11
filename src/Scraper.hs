@@ -1,23 +1,22 @@
 module Scraper
   ( ScraperContext(..)
   , TweetId(..)
+  , Mode(..)
   , scrapeRapperEmails
   )
   where
 
 import Scraper.Email
-import Scraper.SearchResult
+import TweetGetter
 import TwitterAuth
 import User
-import Util
 
 import Protolude
 
-import qualified Data.Generics.Product                as GLens
-import qualified Data.Time                            as Time
-import qualified Web.Twitter.Conduit                  as Twitter
-import qualified Web.Twitter.Conduit.Request.Internal as Twitter
-import qualified Web.Twitter.Types                    as Twitter
+import qualified Data.Generics.Product as GLens
+import qualified Data.Time             as Time
+import qualified Web.Twitter.Conduit   as Twitter
+import qualified Web.Twitter.Types     as Twitter
 
 data ScraperContext
   = ScraperContext
@@ -30,22 +29,28 @@ data ScraperContext
 newtype TweetId
   = TweetId { getTweetId :: Twitter.StatusId }
 
+data Mode
+  = Free FreeSearch
+  | Premium PremiumTweetArchiveSearch
+
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , MonadIO m
      )
-  => Maybe TweetId
+  => Mode
+  -> Maybe TweetId
   -> m ()
 
-scrapeRapperEmails oldestProcessedId = do
+scrapeRapperEmails mode oldestProcessedId = do
   toDate <- forM oldestProcessedId $
     fmap Twitter.statusCreatedAt . call . Twitter.statusesShowId . getTweetId
 
   scrape ScrapeNextRequest
     { requestCount = RequestCount 1
     , tweetCount   = ProcessedTweetCount 0
-    , nextToken    = Nothing
+    , request      = Nothing
     , toDate
+    , mode
     }
 
 
@@ -57,73 +62,54 @@ newtype RequestCount
   = RequestCount Integer
   deriving newtype (Show, Num)
 
-data ScrapeNextRequest
+data ScrapeNextRequest m
   = ScrapeNextRequest
       { requestCount :: RequestCount
       , tweetCount   :: ProcessedTweetCount
-      , nextToken    :: Maybe NextPageToken
       , toDate       :: Maybe Time.UTCTime
+      , request      :: Maybe (m (RequestResult m))
+      , mode         :: Mode
       }
 
-scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest -> m ()
+scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest m -> m ()
 scrape ScrapeNextRequest{..} = do
   putStrLn @Text $ "Starting request #" <> show requestCount
 
-  SearchResults{..} <- call nextQuery
+  RequestResult{..} <- case request of
+    Just req -> req
+    Nothing -> case mode of
+      Free freeRequest       -> getRapperTweets freeRequest
+      Premium premiumRequest -> getRapperTweets premiumRequest
 
-  let currentTweetCount   = ProcessedTweetCount (toInteger $ length results)
+  let currentTweetCount   = ProcessedTweetCount (toInteger $ length tweets)
       processedTweetCount = tweetCount + currentTweetCount
 
-      minimumId = minimum $ id <$> results
+      minimumId = minimum $ id <$> tweets
 
   putStrLn @Text
     $  "Received " <> show currentTweetCount
     <> " tweets with the lowest id=" <> show minimumId
 
-  extractEmails results
+  extractEmails tweets
 
   putStrLn @Text "Request processing complete. Email search and extraction completed."
   putStrLn @Text $ "I have processed " <> show processedTweetCount <> " tweets in total"
 
-  proceedIfNotEmpty ProceedRequest{..} $ \token ->
-    scrape ScrapeNextRequest
-      { requestCount = requestCount + 1
-      , tweetCount   = processedTweetCount
-      , nextToken    = Just token
-      , toDate       = Nothing
-      }
+  let hasNext = isJust nextRequest
 
-  where
-    Twitter.APIRequest{..} = searchQuery
-
-    nextParam = toList $ nextToken <&> \token ->
-      ("next", Twitter.PVString $ getNextPageToken token)
-
-    toDateParam = toList $ toDate <&> \date ->
-      ("toDate", Twitter.PVString $ dayToTwitterTime date)
-
-    nextQuery = searchQuery
-      { Twitter._params = _params <> nextParam <> toDateParam }
-
-
-
-searchQuery :: Twitter.APIRequest Twitter.SearchTweets SearchResults
-searchQuery
-  = Twitter.APIRequest
-      { _method = "GET"
-      , _url    = "https://api.twitter.com/1.1/tweets/search/fullarchive/prod.json"
-      , _params =
-          [ ("query", Twitter.PVString "(from:SendBeatsBot)")
-          , ("fromDate", Twitter.PVString "201607220000")
-          , ("maxResults", Twitter.PVInteger 500)
-          ]
-      }
-
+  proceedIfNotEmpty ProceedRequest{..}
+    $ scrape ScrapeNextRequest
+        { requestCount = requestCount + 1
+        , tweetCount   = processedTweetCount
+        , toDate       = Nothing
+        , request      = nextRequest
+        , mode
+        }
 
 data ProceedRequest
   = ProceedRequest
       { processedTweetCount :: ProcessedTweetCount
-      , next                :: Maybe NextPageToken
+      , hasNext             :: Bool
       , minimumId           :: Twitter.StatusId
       }
 
@@ -134,29 +120,28 @@ proceedIfNotEmpty
      , Session `GLens.HasType` context
      )
   => ProceedRequest
-  -> (NextPageToken -> m ())
+  -> m ()
   -> m ()
 
 proceedIfNotEmpty ProceedRequest{..} nextAction
-  = case next of
-      Nothing -> do
-        putStrLn @Text
-          "\nTwitter API returned no tweets for this request. End of scraping.\n"
+  | hasNext = do
+      putStrLn @Text
+        "\nTwitter API returned no tweets for this request. End of scraping.\n"
 
-        targetTweetCount <- GLens.getTyped @TargetTweetCount <$> ask
+      targetTweetCount <- GLens.getTyped @TargetTweetCount <$> ask
 
-        when (show @_ @Text processedTweetCount /= show targetTweetCount)
-          $ putStrLn @Text "WARNING!"
+      when (show @_ @Text processedTweetCount /= show targetTweetCount)
+        $ putStrLn @Text "WARNING!"
 
-        putStrLn @Text
-          $  "Target tweet count was " <> show targetTweetCount <> ".\n"
-          <> "I processed " <> show processedTweetCount <> ".\n"
+      putStrLn @Text
+        $  "Target tweet count was " <> show targetTweetCount <> ".\n"
+        <> "I processed " <> show processedTweetCount <> ".\n"
 
-        Twitter.Status{..} <- call $ Twitter.statusesShowId minimumId
+      Twitter.Status{..} <- call $ Twitter.statusesShowId minimumId
 
-        putStrLn @Text
-          $ "Oldest processed tweet was created at " <> show statusCreatedAt
+      putStrLn @Text
+        $ "Oldest processed tweet was created at " <> show statusCreatedAt
 
-      Just nextPageToken -> do
-        putStrLn @Text ""
-        nextAction nextPageToken
+  | otherwise = do
+      putStrLn @Text ""
+      nextAction
