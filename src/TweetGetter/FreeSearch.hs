@@ -19,7 +19,7 @@ import qualified Web.Twitter.Types                    as Twitter
 
 data FreeSearch
   = FreeSearch
-      { maybeMaxId :: Maybe Twitter.StatusId
+      { maybeMaxId :: !(Maybe Twitter.StatusId)
       }
 
 instance (MonadIO m, HasTwitterAuth ctx m) => GetRapperTweets FreeSearch m where

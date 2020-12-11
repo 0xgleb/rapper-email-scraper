@@ -18,8 +18,8 @@ import qualified Web.Twitter.Conduit.Request.Internal as Twitter
 
 data PremiumTweetArchiveSearch
   = PremiumTweetArchiveSearch
-      { nextToken :: Maybe NextPageToken
-      , toDate    :: Maybe Time.UTCTime
+      { nextToken :: !(Maybe NextPageToken)
+      , toDate    :: !(Maybe Time.UTCTime)
       }
 
 instance
