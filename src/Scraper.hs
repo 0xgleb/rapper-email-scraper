@@ -26,12 +26,12 @@ data ScraperContext
       }
   deriving stock (Generic)
 
-newtype TweetId
-  = TweetId { getTweetId :: Twitter.StatusId }
-
 data Mode
   = Free FreeSearch
   | Premium PremiumTweetArchiveSearch
+
+newtype TweetId
+  = TweetId { getTweetId :: Twitter.StatusId }
 
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
@@ -54,22 +54,22 @@ scrapeRapperEmails mode oldestProcessedId = do
     }
 
 
-newtype ProcessedTweetCount
-  = ProcessedTweetCount Integer
-  deriving newtype (Show, Num)
+data ScrapeNextRequest m
+  = ScrapeNextRequest
+      { requestCount :: !RequestCount
+      , tweetCount   :: !ProcessedTweetCount
+      , toDate       :: !(Maybe Time.UTCTime)
+      , request      :: Maybe (m (RequestResult m))
+      , mode         :: !Mode
+      }
 
 newtype RequestCount
   = RequestCount Integer
   deriving newtype (Show, Num)
 
-data ScrapeNextRequest m
-  = ScrapeNextRequest
-      { requestCount :: RequestCount
-      , tweetCount   :: ProcessedTweetCount
-      , toDate       :: Maybe Time.UTCTime
-      , request      :: Maybe (m (RequestResult m))
-      , mode         :: Mode
-      }
+newtype ProcessedTweetCount
+  = ProcessedTweetCount Integer
+  deriving newtype (Show, Num)
 
 scrape :: (MonadReader ScraperContext m, MonadIO m) => ScrapeNextRequest m -> m ()
 scrape ScrapeNextRequest{..} = do
@@ -105,6 +105,7 @@ scrape ScrapeNextRequest{..} = do
         , request      = nextRequest
         , mode
         }
+
 
 data ProceedRequest
   = ProceedRequest
