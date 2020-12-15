@@ -45,7 +45,7 @@ authorizedCall
   -> m response
 
 authorizedCall query = do
-  Session_{..} <- G.P.getTyped <$> ask
+  PrivateSessionConstructor{..} <- G.P.upcast <$> ask
 
   let authedCall = Twitter.call twInfo manager query
 

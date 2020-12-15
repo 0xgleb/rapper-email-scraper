@@ -41,6 +41,7 @@ library:
 
 default-extensions:
 - ConstraintKinds
+- DataKinds
 - DeriveAnyClass
 - DeriveGeneric
 - DerivingStrategies

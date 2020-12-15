@@ -5,7 +5,7 @@ module Twitter.TweetGetter.PremiumTweetArchiveSearch
   )
   where
 
-import Twitter.TweetGetter.GetRapperTweets
+import Twitter.TweetGetter.MonadRapperTweetsGetter
 import Twitter.TweetGetter.SearchResult
 import Twitter.Auth
 import Twitter.Call
@@ -25,7 +25,7 @@ data PremiumTweetArchiveSearch
 
 instance
   ( MonadCall m, HasTwitterAuth ctx m )
-  => GetRapperTweets PremiumTweetArchiveSearch m
+  => MonadRapperTweetsGetter PremiumTweetArchiveSearch m
   where
     getRapperTweets = getPremiumSearchQuery
 

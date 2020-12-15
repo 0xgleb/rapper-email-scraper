@@ -8,21 +8,19 @@ import qualified Twitter as Tw
 import           Util
 
 import Protolude
+import Unsafe.Coerce
 
-data BotCtx
-  = BotCtx
-      { scraperContext :: ScraperContext
-      , session        :: Tw.Session
-      }
-  deriving stock (Generic)
+newtype Bot a
+  = Bot { runBot :: ReaderT ScraperContext IO a }
+  deriving newtype (Functor, Applicative, Monad, MonadReader ScraperContext, MonadIO)
+  deriving MonadSay via (IOSayT (ReaderT ScraperContext IO))
+  deriving Tw.MonadCall via (Tw.AuthorizedCallT (ReaderT ScraperContext IO))
 
-newtype Bot m a
-  = Bot { runBot :: ReaderT BotCtx IO a }
-  deriving newtype (Functor, Applicative, Monad)
-  deriving MonadSay via (IOSayT (ReaderT BotCtx IO))
-  deriving Tw.MonadCall via (Tw.AuthorizedCallT (ReaderT BotCtx IO))
+instance Tw.MonadRapperTweetsGetter Tw.FreeSearch Bot where
+  getRapperTweets = unsafeCoerce
+    $ (Tw.getRapperTweets :: Tw.FreeSearch -> Tw.FreeSearchT Bot (Tw.RequestResult (Tw.FreeSearchT Bot)))
 
-newtype TwitterT m a
+newtype TwitterT a
   = TwitterT { runTwitter :: ReaderT Tw.Session IO a }
   deriving newtype (Functor, Applicative, Monad)
   deriving MonadSay via (IOSayT (ReaderT Tw.Session IO))
@@ -30,7 +28,7 @@ newtype TwitterT m a
 
 run :: IO ()
 run = do
-  session <- Tw.createSession
+  session@Tw.PrivateSessionConstructor{..} <- Tw.createSession
 
   (userId, targetTweetCount) <-
     runReaderT (runTwitter Tw.getUserData) session
@@ -38,7 +36,4 @@ run = do
   let mode = Free $ Tw.FreeSearch Nothing
 
   runReaderT (runBot (scrapeRapperEmails mode Nothing))
-    BotCtx
-      { scraperContext = ScraperContext{..}
-      , ..
-      }
+    ScraperContext{..}

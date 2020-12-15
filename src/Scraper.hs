@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Scraper
   ( ScraperContext(..)
   , TweetId(..)
@@ -20,7 +22,8 @@ import qualified Web.Twitter.Types     as Twitter
 
 data ScraperContext
   = ScraperContext
-      { session          :: !Tw.Session
+      { manager          :: !Twitter.Manager
+      , twInfo           :: !Twitter.TWInfo
       , userId           :: !Twitter.UserId
       , targetTweetCount :: !Tw.TargetTweetCount
       }
@@ -28,7 +31,7 @@ data ScraperContext
 
 type HasScraperContext context m
   = ( MonadReader context m
-    , context `Generic.Subtype` ScraperContext
+    , ScraperContext `Generic.Subtype` context
     )
 
 data Mode
@@ -39,7 +42,8 @@ newtype TweetId
   = TweetId { getTweetId :: Twitter.StatusId }
 
 scrapeRapperEmails
-  :: ( HasScraperContext context m
+  :: ( MonadReader ScraperContext m
+     , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m
@@ -50,7 +54,7 @@ scrapeRapperEmails
 
 scrapeRapperEmails mode oldestProcessedId = do
   toDate <- forM oldestProcessedId
-    $ fmap Twitter.statusCreatedAt . Tw.call . Twitter.statusesShowId . getTweetId
+    $ fmap Twitter.statusCreatedAt . getStatusById . getTweetId
 
   scrape ScrapeArgs
     { requestCount = RequestCount 1
@@ -83,11 +87,14 @@ newtype ProcessedTweetCount
 
 scrape
   :: ( HasScraperContext context m
+     , Tw.Session `GLens.Subtype` context
+     , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m
      )
-  => ScrapeArgs m -> m ()
+  => ScrapeArgs m
+  -> m ()
 scrape ScrapeArgs{..} = do
   say $ "Starting request #" <> show requestCount
 
@@ -106,7 +113,7 @@ scrape ScrapeArgs{..} = do
     $  "Received " <> show currentTweetCount
     <> " tweets with the lowest id=" <> show minimumId
 
-  extractEmails tweets
+  extractEmails @ScraperContext tweets
 
   putStrLn @Text "Request processing complete. Email search and extraction completed."
   putStrLn @Text $ "I have processed " <> show processedTweetCount <> " tweets in total"
@@ -130,6 +137,16 @@ data ProceedIfNotEmptyArgs
       , minimumId           :: !Twitter.StatusId
       }
 
+class Monad m => MonadGetStatusById m where
+  getStatusById :: Twitter.StatusId -> m Twitter.Status
+
+-- newtype GetStatusByIdT m a
+--   = GetStatusByIdT (m a)
+--   deriving newtype (Functor, Applicative, Monad)
+
+instance (Monad m, Tw.MonadCall m) => MonadGetStatusById m where
+  getStatusById = Tw.call . Twitter.statusesShowId
+
 proceedIfNotEmpty
   :: ( MonadSay m
      , Tw.MonadCall m
@@ -144,7 +161,7 @@ proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
       say
         "\nTwitter API returned no tweets for this request. End of scraping.\n"
 
-      targetTweetCount <- GLens.getTyped <$> ask
+      targetTweetCount <- GLens.getTyped @Tw.TargetTweetCount . GLens.upcast @ScraperContext <$> ask
 
       when (show @_ @Text processedTweetCount /= show targetTweetCount)
         $ say "WARNING!"
@@ -153,7 +170,7 @@ proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
         $  "Target tweet count was " <> show targetTweetCount <> ".\n"
         <> "I processed " <> show processedTweetCount <> ".\n"
 
-      Twitter.Status{..} <- Tw.call $ Twitter.statusesShowId minimumId
+      Twitter.Status{..} <- getStatusById minimumId
 
       say $ "Oldest processed tweet was created at " <> show statusCreatedAt
 

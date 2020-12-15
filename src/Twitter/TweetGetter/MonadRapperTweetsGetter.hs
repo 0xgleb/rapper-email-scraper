@@ -1,6 +1,6 @@
-module Twitter.TweetGetter.GetRapperTweets
+module Twitter.TweetGetter.MonadRapperTweetsGetter
   ( RequestResult(..)
-  , GetRapperTweets(..)
+  , MonadRapperTweetsGetter(..)
   )
   where
 
@@ -14,5 +14,5 @@ data RequestResult m
       , nextRequest :: Maybe (m (RequestResult m))
       }
 
-class GetRapperTweets (requestData :: Type) (m :: Type -> Type) where
+class Monad m => MonadRapperTweetsGetter (requestData :: Type) (m :: Type -> Type) where
   getRapperTweets :: requestData -> m (RequestResult m)

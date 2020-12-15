@@ -8,20 +8,21 @@ module Twitter.Auth
 import Protolude
 
 import qualified Data.Default          as Default
-import qualified Data.Generics.Product as Generic
+import qualified Data.Generics.Product as GLens
 import qualified System.Environment    as Env
 import qualified Web.Twitter.Conduit   as Twitter
 
 
 data Session
-  = Session_
+  = PrivateSessionConstructor
       { manager :: !Twitter.Manager
       , twInfo  :: !Twitter.TWInfo
       }
+  deriving (Generic)
 
 type HasTwitterAuth context m
   = ( MonadReader context m
-    , Session `Generic.HasType` context
+    , Session `GLens.Subtype` context
     )
 
 createSession :: IO Session
@@ -43,7 +44,7 @@ createSession = do
         , ("oauth_token_secret", accessSecret)
         ]
 
-  pure Session_{..}
+  pure PrivateSessionConstructor{..}
 
 
 data TwitterAuthentication

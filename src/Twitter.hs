@@ -6,7 +6,7 @@ module Twitter
   )
   where
 
-import Twitter.Auth        hiding (Session_)
+import Twitter.Auth
 import Twitter.Call
 import Twitter.TweetGetter
 import Twitter.User

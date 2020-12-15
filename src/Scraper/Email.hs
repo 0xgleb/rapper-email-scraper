@@ -27,16 +27,18 @@ import qualified Web.Twitter.Types     as Twitter
 
 
 extractEmails
-  :: ( MonadSay m
+  :: forall subcontext m context
+   . ( MonadSay m
      , MonadIO m
      , MonadReader context m
-     , Twitter.UserId `GLens.HasType` context
+     , subcontext `GLens.Subtype` context
+     , Twitter.UserId `GLens.HasType` subcontext
      )
   => [Tweet]
   -> m ()
 
 extractEmails tweets = do
-  userId <- GLens.getTyped @Twitter.UserId <$> ask
+  userId <- GLens.getTyped @Twitter.UserId . GLens.upcast @subcontext <$> ask
 
   let filterFunc = (/= userId) . Twitter.userId . GLens.getTyped
   when (any filterFunc tweets)
