@@ -1,10 +1,10 @@
-module TweetGetter.GetRapperTweets
+module Twitter.TweetGetter.GetRapperTweets
   ( RequestResult(..)
   , GetRapperTweets(..)
   )
   where
 
-import TweetGetter.SearchResult
+import Twitter.TweetGetter.SearchResult
 
 import Protolude
 

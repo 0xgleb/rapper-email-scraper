@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module TweetGetter.SearchResult
+module Twitter.TweetGetter.SearchResult
   ( SearchResults(..)
   , NextPageToken(..)
   , Tweet(..)

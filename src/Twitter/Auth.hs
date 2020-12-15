@@ -1,27 +1,28 @@
-module TwitterAuth
-  ( Session
+module Twitter.Auth
+  ( Session(..)
   , createSession
   , HasTwitterAuth
-  , call
   )
   where
 
 import Protolude
 
-import qualified Control.Exception        as Exception
-import qualified Data.Default             as Default
-import qualified Data.Generics.Product    as G.P
-import qualified System.Environment       as Env
-import qualified System.Time.Extra        as Extra
-import qualified Web.Twitter.Conduit      as Twitter
-import qualified Web.Twitter.Conduit.Base as Twitter
+import qualified Data.Default          as Default
+import qualified Data.Generics.Product as Generic
+import qualified System.Environment    as Env
+import qualified Web.Twitter.Conduit   as Twitter
 
 
 data Session
-  = Session
+  = Session_
       { manager :: !Twitter.Manager
       , twInfo  :: !Twitter.TWInfo
       }
+
+type HasTwitterAuth context m
+  = ( MonadReader context m
+    , Session `Generic.HasType` context
+    )
 
 createSession :: IO Session
 createSession = do
@@ -42,7 +43,7 @@ createSession = do
         , ("oauth_token_secret", accessSecret)
         ]
 
-  pure Session{..}
+  pure Session_{..}
 
 
 data TwitterAuthentication
@@ -63,35 +64,3 @@ getTwitterEnvVars = do
   accessSecret   <- getEnv "OAUTH_ACCESS_TOKEN_SECRET"
 
   pure TwitterAuthentication{..}
-
-
-type HasTwitterAuth context m
-  = ( MonadReader context m
-    , Session `G.P.HasType` context
-    )
-
-call
-  :: ( HasTwitterAuth context m
-     , Twitter.ResponseBodyType response
-     , MonadIO m
-     )
-  => Twitter.APIRequest apiName response
-  -> m response
-
-call query = do
-  Session{..} <- G.P.getTyped <$> ask
-
-  let authedCall = Twitter.call twInfo manager query
-
-  liftIO $ Exception.catch authedCall $ \(exception :: Exception.IOException) -> do
-    print exception
-
-    putStrLn @Text
-      "I'm guessing that the Twitter rate limit was hit. \
-      \I'll wait for 15 minutes and try again."
-
-    Extra.sleep 60
-
-    putStrLn @Text "Trying to perform the call again"
-
-    authedCall

@@ -1,14 +1,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module TweetGetter.FreeSearch
+module Twitter.TweetGetter.FreeSearch
   ( FreeSearch(..)
   )
   where
 
-import TweetGetter.GetRapperTweets
-import TweetGetter.SearchResult
-import TwitterAuth
-import User
+import Twitter.Auth
+import Twitter.Call
+import Twitter.TweetGetter.GetRapperTweets
+import Twitter.TweetGetter.SearchResult
+import Twitter.User
 
 import Protolude
 
@@ -22,13 +23,13 @@ data FreeSearch
       { maybeMaxId :: !(Maybe Twitter.StatusId)
       }
 
-instance (MonadIO m, HasTwitterAuth ctx m) => GetRapperTweets FreeSearch m where
+instance (MonadCall m, HasTwitterAuth ctx m) => GetRapperTweets FreeSearch m where
   getRapperTweets = getFreeSearchTweets
 
 getFreeSearchTweets
-  :: ( HasTwitterAuth context m
-     , MonadIO m
-     , Monad m
+  :: forall m context
+   . ( HasTwitterAuth context m
+     , MonadCall m
      )
   => FreeSearch
   -> m (RequestResult m)
@@ -37,7 +38,7 @@ getFreeSearchTweets FreeSearch{..} = do
   statuses <- call query
 
   let nextRequest
-        = fmap (getFreeSearchTweets . FreeSearch . Just)
+        = fmap (getFreeSearchTweets @m . FreeSearch . Just)
         $ headMay $ sort $ id <$> tweets
 
       tweets = statuses <&> \Twitter.Status{..} ->

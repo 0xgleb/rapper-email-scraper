@@ -1,6 +1,8 @@
 module Util
   ( flipFoldl
   , dayToTwitterTime
+  , MonadSay(..)
+  , IOSayT(..)
   )
   where
 
@@ -23,3 +25,14 @@ flipFoldl init foldable accumulator
 dayToTwitterTime :: Time.UTCTime -> Text
 dayToTwitterTime
   = (<> "0000") . Txt.filter (/= '-') . show . Time.utctDay
+
+
+class Monad m => MonadSay (m :: Type -> Type) where
+  say :: Text -> m ()
+
+newtype IOSayT m a
+  = IOSayT (m a)
+  deriving newtype (Functor, Applicative, Monad)
+
+instance MonadIO m => MonadSay (IOSayT m) where
+  say = IOSayT . putStrLn -- TODO: add time

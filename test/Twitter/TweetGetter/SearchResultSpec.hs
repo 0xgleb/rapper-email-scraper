@@ -1,6 +1,6 @@
-module TweetGetter.SearchResultSpec (spec) where
+module Twitter.TweetGetter.SearchResultSpec (spec) where
 
-import TweetGetter.SearchResult
+import Twitter.TweetGetter.SearchResult
 
 import Protolude
 import Test.Hspec

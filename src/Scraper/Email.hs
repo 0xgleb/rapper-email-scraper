@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Scraper.Email
   ( extractEmails
 
@@ -9,7 +11,7 @@ module Scraper.Email
 
 import Scraper.Duplicates
 import Scraper.Unmatched
-import TweetGetter.SearchResult
+import Twitter.TweetGetter.SearchResult
 import Util
 
 import Control.Lens
@@ -25,7 +27,8 @@ import qualified Web.Twitter.Types     as Twitter
 
 
 extractEmails
-  :: ( MonadIO m
+  :: ( MonadSay m
+     , MonadIO m
      , MonadReader context m
      , Twitter.UserId `GLens.HasType` context
      )
@@ -33,14 +36,14 @@ extractEmails
   -> m ()
 
 extractEmails tweets = do
-  userId <- GLens.getTyped <$> ask
+  userId <- GLens.getTyped @Twitter.UserId <$> ask
 
   let filterFunc = (/= userId) . Twitter.userId . GLens.getTyped
   when (any filterFunc tweets)
-    $ putStrLn @Text
-        $  "\nWARNING: "
-        <> show (length $ filter filterFunc tweets)
-        <> " fetched tweets don't match the user!\n"
+    $ say
+    $  "\nWARNING: "
+    <> show (length $ filter filterFunc tweets)
+    <> " fetched tweets don't match the user!\n"
 
   let maybeEmails
         = removeDuplicateEmails

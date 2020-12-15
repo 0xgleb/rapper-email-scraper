@@ -1,13 +1,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module TweetGetter.PremiumTweetArchiveSearch
+module Twitter.TweetGetter.PremiumTweetArchiveSearch
   ( PremiumTweetArchiveSearch(..)
   )
   where
 
-import TweetGetter.GetRapperTweets
-import TweetGetter.SearchResult
-import TwitterAuth
+import Twitter.TweetGetter.GetRapperTweets
+import Twitter.TweetGetter.SearchResult
+import Twitter.Auth
+import Twitter.Call
 import Util
 
 import Protolude
@@ -23,14 +24,14 @@ data PremiumTweetArchiveSearch
       }
 
 instance
-  (MonadIO m, HasTwitterAuth ctx m)
-  => GetRapperTweets PremiumTweetArchiveSearch m where
-  getRapperTweets = getPremiumSearchQuery
+  ( MonadCall m, HasTwitterAuth ctx m )
+  => GetRapperTweets PremiumTweetArchiveSearch m
+  where
+    getRapperTweets = getPremiumSearchQuery
 
 getPremiumSearchQuery
   :: ( HasTwitterAuth context m
-     , MonadIO m
-     , Monad m
+     , MonadCall m
      )
   => PremiumTweetArchiveSearch
   -> m (RequestResult m)
