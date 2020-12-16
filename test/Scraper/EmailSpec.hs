@@ -92,7 +92,7 @@ spec = do
 
   describe "extractEmailsFromTweets" $ do
     it "can extract and save emails from the tweets you give it" $ do
-      let (extractionResult, _) = runTestMonad extractTestContext $ do
+      let TestResult{..} = runTestMonad extractTestContext $ do
             let filePath = "rapper-emails.txt"
             initEmails <- readEmails @_ @Email filePath
             let initiallyEmpty = initEmails == []
@@ -106,7 +106,7 @@ spec = do
             finalEmails <- readEmails @_ @Email filePath
             let noDuplicates = mockEmails == finalEmails
             pure ExtractionResult{..}
-      extractionResult `shouldBe` positiveExtractionResult
+      result `shouldBe` positiveExtractionResult
 
 data ExtractionResult
   = ExtractionResult

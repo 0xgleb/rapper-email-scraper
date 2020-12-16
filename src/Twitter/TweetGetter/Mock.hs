@@ -14,10 +14,14 @@ import Protolude
 
 import qualified Data.Time         as T
 import qualified Web.Twitter.Types as Twitter
+import qualified Control.Monad.Trans as Trans
 
 newtype MockedCallT m a
   = MockedCallT { runMockedCallT :: m a }
   deriving newtype (Functor, Applicative, Monad)
+
+instance Trans.MonadTrans MockedCallT where
+  lift = MockedCallT
 
 mockEmails :: [Email]
 mockEmails
@@ -56,6 +60,7 @@ mockStatus = Twitter.Status
   , statusWithheldScope       = Nothing
   , statusDisplayTextRange    = Nothing
   }
+
 mockTweets :: [Tweet]
 mockTweets =
   [ Tweet
@@ -66,13 +71,13 @@ mockTweets =
       }
   , Tweet
       { id        = 983741923841
-      , truncated = False
+      , truncated = True
       , text      = "Don't send me beats"
       , user      = mockUser
       }
   , Tweet
       { id        = 123412
-      , truncated = True
+      , truncated = False
       , text      = "Send some shit to test@gmail.com please boy"
       , user      = mockUser
       }

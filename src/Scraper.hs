@@ -34,9 +34,7 @@ import qualified Control.Monad.Trans as Trans
 
 data ScraperContext
   = ScraperContext
-      { manager          :: !Twitter.Manager
-      , twInfo           :: !Twitter.TWInfo
-      , userId           :: !Twitter.UserId
+      { userId           :: !Twitter.UserId
       , targetTweetCount :: !Tw.TargetTweetCount
       }
   deriving stock (Generic)
@@ -54,7 +52,7 @@ newtype TweetId
   = TweetId { getTweetId :: Twitter.StatusId }
 
 scrapeRapperEmails
-  :: ( MonadReader ScraperContext m
+  :: ( HasScraperContext context m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
      , MonadGetStatusById m
@@ -101,7 +99,6 @@ newtype ProcessedTweetCount
 scrape
   :: forall context m
    . ( HasScraperContext context m
-     , Tw.Session `GLens.Subtype` context
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
      , MonadGetStatusById m
@@ -186,8 +183,7 @@ proceedIfNotEmpty
 
 proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
   | not hasNext = do
-      say "\nTwitter API returned no tweets for this request.\
-          \ End of scraping.\n"
+      say "\nTwitter API returned no tweets for this request. End of scraping.\n"
 
       targetTweetCount <-
         GLens.getTyped @Tw.TargetTweetCount . GLens.upcast @subcontext @context <$> ask
@@ -201,7 +197,7 @@ proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
 
       Twitter.Status{..} <- getStatusById minimumId
 
-      say $ "Oldest processed tweet was created at " <> show statusCreatedAt
+      say $ "Oldest processed tweet was created at " <> show (Time.utctDay statusCreatedAt)
 
   | otherwise = do
       say ""

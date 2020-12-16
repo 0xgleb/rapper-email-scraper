@@ -11,8 +11,20 @@ import           Util
 import Protolude
 import Unsafe.Coerce
 
+import qualified Web.Twitter.Conduit   as Twitter
+import qualified Web.Twitter.Types     as Twitter
+
+data BotContext
+  = BotContext
+      { manager          :: !Twitter.Manager
+      , twInfo           :: !Twitter.TWInfo
+      , userId           :: !Twitter.UserId
+      , targetTweetCount :: !Tw.TargetTweetCount
+      }
+  deriving stock (Generic)
+
 newtype Bot a
-  = Bot { runBot :: ReaderT ScraperContext IO a }
+  = Bot { runBot :: ReaderT BotContext IO a }
   deriving MonadSay via IOSayT Bot
   deriving Tw.MonadCall via Tw.AuthorizedCallT Bot
   deriving MonadFileManager via IOFileManagerT Bot
@@ -21,7 +33,7 @@ newtype Bot a
     ( Functor
     , Applicative
     , Monad
-    , MonadReader ScraperContext
+    , MonadReader BotContext
     , MonadIO
     )
 
@@ -57,4 +69,4 @@ run = do
   let mode = Free $ Tw.FreeSearch Nothing
 
   runReaderT (runBot (scrapeRapperEmails mode Nothing))
-    ScraperContext{..}
+    BotContext{..}
