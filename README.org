@@ -1,18 +1,15 @@
 * rapper-mail-scraper
-
-*TODO*:
-- [X] Move tokens into environment variables so you can commit your changes
-- [X] Implement email scraping + tests
-- [X] Implement saving emails into a file
-- [X] Implement duplicate removal (from feed and saved) + tests for the pure part
-- [X] Implement recursive page call and ensure that current max_id gets logged in case you reach the limit
-- [X] Implement tweet count
-- [X] Save tweets without emails into a separate JSON file
-- [X] Move session data into MonadReader
-- [X] Batch truncated tweet saving
-- [X] Only save truncated tweets (and rename things accordingly)
-- [ ] Implement runtime error handling + automatic restarting
-- [ ] Return max_id from the Haskell binary
-- [ ] Change the shell script to write the new max_id into an environment variable
-- [ ] Change the Haskell binary to read initial max_id from the environment variable
-- [ ] Collect (ideally) 40k emails from all the tweets possible
+** Build the scraper
+#+begin_src shell
+$ stack build # in the scraper folder
+#+end_src
+** Test the scraper
+#+begin_src shell
+$ stack test --file-watch
+#+end_src
+** Run the scraper
+You need to put Twitter API keys in twitter.env and then
+#+begin_src shell
+$ source twitter.env
+$ stack exec get-rapper-emails
+#+end_src
