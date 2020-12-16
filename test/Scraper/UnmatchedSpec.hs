@@ -2,7 +2,7 @@
 
 module Scraper.UnmatchedSpec (spec) where
 
-import JSONFileManager
+import FileManager
 import Scraper.Duplicates
 import Scraper.Unmatched
 
@@ -37,7 +37,7 @@ spec = do
   describe "saveUnmatchedTweet @StateJSONFileManager" $ do
     it "can save a list of unmatched tweets and always read it back"
       $ property $ \savedTweets@(SavedTweets unmatchedTweets) ->
-          let parsedUnmatchedTweets = fst $ flip runState (Map.fromList []) $ runStateJSONFileManager $ do
+          let parsedUnmatchedTweets = fst $ flip runState (Map.fromList []) $ runStateFileManager $ do
                 writeJSONFile "unmatched-tweets.json" $ SavedTweets []
                 saveUnmatchedTweets unmatchedTweets
                 readJSONFile "unmatched-tweets.json"

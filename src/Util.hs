@@ -1,8 +1,10 @@
 module Util
   ( flipFoldl
   , dayToTwitterTime
+  , (...)
   , MonadSay(..)
   , IOSayT(..)
+  , MockSayT(..)
   )
   where
 
@@ -26,6 +28,8 @@ dayToTwitterTime :: Time.UTCTime -> Text
 dayToTwitterTime
   = (<> "0000") . Txt.filter (/= '-') . show . Time.utctDay
 
+(...) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(...) = (.).(.)
 
 class Monad m => MonadSay (m :: Type -> Type) where
   say :: Text -> m ()
@@ -36,3 +40,10 @@ newtype IOSayT m a
 
 instance MonadIO m => MonadSay (IOSayT m) where
   say = IOSayT . putStrLn -- TODO: add time
+
+newtype MockSayT m a
+  = MockSayT { runMockSayT :: StateT [Text] m a }
+  deriving newtype (Functor, Applicative, Monad)
+
+instance Monad m => MonadSay (MockSayT m) where
+  say text = MockSayT $ state $ ((),) . (text :)

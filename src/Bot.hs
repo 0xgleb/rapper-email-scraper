@@ -3,10 +3,10 @@ module Bot
   )
   where
 
+import           FileManager
 import           Scraper
 import qualified Twitter as Tw
 import           Util
-import JSONFileManager
 
 import Protolude
 import Unsafe.Coerce
@@ -16,11 +16,14 @@ newtype Bot a
   deriving newtype (Functor, Applicative, Monad, MonadReader ScraperContext, MonadIO)
   deriving MonadSay via IOSayT (ReaderT ScraperContext IO)
   deriving Tw.MonadCall via Tw.AuthorizedCallT (ReaderT ScraperContext IO)
-  deriving MonadJSONFileManager via IOJSONFileManagerT Bot
+  deriving MonadFileManager via IOFileManagerT Bot
 
 instance Tw.MonadRapperTweetsGetter Tw.FreeSearch Bot where
   getRapperTweets = unsafeCoerce
-    $ (Tw.getRapperTweets :: Tw.FreeSearch -> Tw.FreeSearchT Bot (Tw.RequestResult (Tw.FreeSearchT Bot)))
+    $ (Tw.getRapperTweets
+         :: Tw.FreeSearch
+         -> Tw.FreeSearchT Bot
+              (Tw.RequestResult (Tw.FreeSearchT Bot)))
 
 newtype TwitterT a
   = TwitterT { runTwitter :: ReaderT Tw.Session IO a }

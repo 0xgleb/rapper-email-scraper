@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module JSONFileManagerSpec (spec) where
+module FileManagerSpec (spec) where
 
-import JSONFileManager
+import FileManager
 
 import Protolude hiding (list)
 import Test.Hspec
@@ -14,7 +14,7 @@ spec :: Spec
 spec = do
   describe "instance MonadJSONFileManager StateJSONFileManager" $ do
     it "works" $ do
-      let result = fst $ flip runState (Map.fromList []) $ runStateJSONFileManager $ do
+      let result = fst $ flip runState (Map.fromList []) $ runStateFileManager $ do
             writeJSONFile "unmatched-tweets.json" [1 :: Word, 2, 3, 4]
             fileExists <- doesFileExist "unmatched-tweets.json"
             (list :: Maybe [Word]) <- readJSONFile "unmatched-tweets.json"

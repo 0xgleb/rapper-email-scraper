@@ -8,9 +8,9 @@ module Scraper.Unmatched
   )
   where
 
+import           FileManager
 import qualified Prelude
 import           Protolude
-import JSONFileManager
 
 import qualified Data.Aeson           as Aeson
 import qualified Data.HashMap.Strict  as Map
@@ -18,7 +18,7 @@ import qualified Data.Text            as Txt
 import qualified Web.Twitter.Types    as Twitter
 
 
-saveUnmatchedTweets :: MonadJSONFileManager m => [UnmatchedTweet] -> m ()
+saveUnmatchedTweets :: MonadFileManager m => [UnmatchedTweet] -> m ()
 saveUnmatchedTweets unmatchedTweets = do
   let filePath = "unmatched-tweets.json"
 

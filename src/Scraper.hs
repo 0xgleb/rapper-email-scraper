@@ -8,10 +8,10 @@ module Scraper
   )
   where
 
+import           FileManager
 import           Scraper.Email
 import qualified Twitter       as Tw
 import           Util
-import JSONFileManager
 
 import Protolude
 
@@ -45,7 +45,7 @@ newtype TweetId
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
-     , MonadJSONFileManager m
+     , MonadFileManager m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m
@@ -91,7 +91,7 @@ scrape
   :: ( HasScraperContext context m
      , Tw.Session `GLens.Subtype` context
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
-     , MonadJSONFileManager m
+     , MonadFileManager m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m
@@ -116,7 +116,7 @@ scrape ScrapeArgs{..} = do
     $  "Received " <> show currentTweetCount
     <> " tweets with the lowest id=" <> show minimumId
 
-  extractEmails @ScraperContext tweets
+  extractEmailsFromTweets @ScraperContext tweets
 
   putStrLn @Text "Request processing complete. Email search and extraction completed."
   putStrLn @Text $ "I have processed " <> show processedTweetCount <> " tweets in total"

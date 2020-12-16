@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Scraper.Email
-  ( extractEmails
+  ( extractEmailsFromTweets
 
   -- * exported for testing purposes only
   , Email(..)
@@ -9,11 +9,11 @@ module Scraper.Email
   )
   where
 
+import FileManager
 import Scraper.Duplicates
 import Scraper.Unmatched
 import Twitter.TweetGetter.SearchResult
 import Util
-import JSONFileManager
 
 import Control.Lens
 import Protolude
@@ -26,11 +26,10 @@ import qualified Text.Regex.Quote      as Regex
 import qualified Web.Twitter.Types     as Twitter
 
 
-extractEmails
-  :: forall subcontext m context
-   . ( MonadJSONFileManager m
+extractEmailsFromTweets
+  :: forall subcontext context m
+   . ( MonadFileManager m
      , MonadSay m
-     , MonadIO m
      , MonadReader context m
      , subcontext `GLens.Subtype` context
      , Twitter.UserId `GLens.HasType` subcontext
@@ -38,7 +37,7 @@ extractEmails
   => [Tweet]
   -> m ()
 
-extractEmails tweets = do
+extractEmailsFromTweets tweets = do
   userId <- GLens.getTyped @Twitter.UserId . GLens.upcast @subcontext <$> ask
 
   let filterFunc = (/= userId) . Twitter.userId . GLens.getTyped
@@ -57,12 +56,7 @@ extractEmails tweets = do
 
       filePath = "rapper-emails.txt"
 
-  fileExists <- doesFileExist filePath
-
-  savedEmails <-
-    if fileExists
-    then liftIO $ fmap Email . Txt.lines <$> readFile filePath
-    else pure []
+  savedEmails <- readEmails filePath
 
   let (emails, truncatedTweets)
         = flipFoldl ([], []) maybeEmails $ \accumulated -> \case
@@ -78,8 +72,8 @@ extractEmails tweets = do
 
   saveUnmatchedTweets truncatedTweets
 
-  void $ forM (filter (not . flip elem savedEmails) emails) $ \(Email email) ->
-    liftIO $ appendFile filePath $ email <> "\n"
+  saveUnsavedEmails filePath savedEmails
+    $ reverse $ filter (not . (`elem` savedEmails)) emails
 
 
 newtype Email
