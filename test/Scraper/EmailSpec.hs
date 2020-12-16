@@ -1,23 +1,20 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Scraper.EmailSpec (spec) where
 
 import FileManager
 import Scraper.Email
+import TestMonad
 import Twitter.TweetGetter.FreeSearch
-import Util
-
+import Twitter.TweetGetter.Mock
 
 import Protolude
 import Test.Hspec
-
-import qualified Data.Map.Strict as Map
 
 
 testTweetList :: [(Email, Text)]
 testTweetList =
   [ ( Email "realskinny24@gmail.com"
-    , "RT @FrSkinny: I’m tryna spill my feelings on a track send me 💔 beats. Realskinny24@gmail.com"
+    , "RT @FrSkinny: I’m tryna spill my feelings on a track send me 💔 beats.\
+      \ Realskinny24@gmail.com"
     )
 
   , ( Email "juicesinatra23@gmail.com"
@@ -95,29 +92,21 @@ spec = do
 
   describe "extractEmailsFromTweets" $ do
     it "can extract and save emails from the tweets you give it" $ do
-      let extractionResult
-            = fst $ flip runState (Map.fromList []) $ runStateFileManager
-            $ fmap fst $ flip runStateT [] $ runMockSayT
-            $ flip runReaderT extractTestContext $ runTestExtractEmailsFromTweets $ do
-                let filePath = "rapper-emails.txt"
-                initEmails <- readEmails @_ @Email filePath
-                let initiallyEmpty = initEmails == []
-                extractEmailsFromTweets @ExtractTestContext @ExtractTestContext []
-                noChangeEmails <- readEmails @_ @Email filePath
-                let extractingEmptyListMakesNoChange = noChangeEmails == []
-                extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
-                emails <- readEmails @_ @Email filePath
-                let extractingWorks = expectedEmails == emails
-                extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
-                finalEmails <- readEmails @_ @Email filePath
-                let noDuplicates = expectedEmails == finalEmails
-                pure ExtractionResult{..}
-      finalEmails extractionResult `shouldBe` expectedEmails
+      let extractionResult = runTestMonad extractTestContext $ do
+            let filePath = "rapper-emails.txt"
+            initEmails <- readEmails @_ @Email filePath
+            let initiallyEmpty = initEmails == []
+            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext []
+            noChangeEmails <- readEmails @_ @Email filePath
+            let extractingEmptyListMakesNoChange = noChangeEmails == []
+            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
+            emails <- readEmails @_ @Email filePath
+            let extractingWorks = mockEmails == emails
+            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
+            finalEmails <- readEmails @_ @Email filePath
+            let noDuplicates = mockEmails == finalEmails
+            pure ExtractionResult{..}
       extractionResult `shouldBe` positiveExtractionResult
-
-expectedEmails :: [Email]
-expectedEmails
-  = Email <$> ["test@email.com", "test@gmail.com"]
 
 data ExtractionResult
   = ExtractionResult
@@ -125,18 +114,11 @@ data ExtractionResult
       , extractingEmptyListMakesNoChange :: Bool
       , extractingWorks                  :: Bool
       , noDuplicates                     :: Bool
-      , finalEmails                        :: [Email]
       }
   deriving stock (Eq, Show)
 
 positiveExtractionResult :: ExtractionResult
-positiveExtractionResult =  ExtractionResult True True True True expectedEmails
-
-newtype TestExtractEmailsFromTweets a
-  = TestExtractEmailsFromTweets
-      { runTestExtractEmailsFromTweets
-          :: ReaderT ExtractTestContext (MockSayT StateFileManager) a }
-  deriving newtype (Functor, Applicative, Monad, MonadReader ExtractTestContext)
+positiveExtractionResult =  ExtractionResult True True True True
 
 data ExtractTestContext
   = ExtractTestContext
@@ -149,26 +131,3 @@ extractTestContext
   = ExtractTestContext
       { userId = 11111
       }
-
-instance MonadFileManager TestExtractEmailsFromTweets where
-  doesFileExist = TestExtractEmailsFromTweets . lift . doesFileExist
-  readJSONFile  = TestExtractEmailsFromTweets . lift . readJSONFile
-  readEmails    = TestExtractEmailsFromTweets . lift . readEmails
-
-  writeJSONFile = (TestExtractEmailsFromTweets . lift) ... writeJSONFile
-
-  saveUnsavedEmails filePath
-    = (TestExtractEmailsFromTweets . lift) ... saveUnsavedEmails filePath
-
-instance MonadFileManager (MockSayT StateFileManager) where
-  doesFileExist = MockSayT . lift . doesFileExist
-  readJSONFile  = MockSayT . lift . readJSONFile
-  readEmails    = MockSayT . lift . readEmails
-
-  writeJSONFile = (MockSayT . lift) ... writeJSONFile
-
-  saveUnsavedEmails filePath
-    = (MockSayT . lift) ... saveUnsavedEmails filePath
-
-instance MonadSay TestExtractEmailsFromTweets where
-  say = TestExtractEmailsFromTweets . lift . say

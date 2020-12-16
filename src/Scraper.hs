@@ -37,7 +37,7 @@ type HasScraperContext context m
 
 data Mode
   = Free !Tw.FreeSearch
-  | Premium !Tw.PremiumTweetArchiveSearch
+  | Premium !Tw.PremiumArchiveSearch
 
 newtype TweetId
   = TweetId { getTweetId :: Twitter.StatusId }
@@ -45,6 +45,7 @@ newtype TweetId
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
+     , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
      , MonadFileManager m
      , Tw.MonadCall m
      , MonadSay m
@@ -91,10 +92,10 @@ scrape
   :: ( HasScraperContext context m
      , Tw.Session `GLens.Subtype` context
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
+     , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
      , MonadFileManager m
      , Tw.MonadCall m
      , MonadSay m
-     , MonadIO m
      )
   => ScrapeArgs m
   -> m ()
@@ -118,8 +119,8 @@ scrape ScrapeArgs{..} = do
 
   extractEmailsFromTweets @ScraperContext tweets
 
-  putStrLn @Text "Request processing complete. Email search and extraction completed."
-  putStrLn @Text $ "I have processed " <> show processedTweetCount <> " tweets in total"
+  say "Request processing complete. Email search and extraction completed."
+  say $ "I have processed " <> show processedTweetCount <> " tweets in total"
 
   let hasNext = isJust nextRequest
 

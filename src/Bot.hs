@@ -25,6 +25,13 @@ instance Tw.MonadRapperTweetsGetter Tw.FreeSearch Bot where
          -> Tw.FreeSearchT Bot
               (Tw.RequestResult (Tw.FreeSearchT Bot)))
 
+instance Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch Bot where
+  getRapperTweets = unsafeCoerce
+    $ (Tw.getRapperTweets
+         :: Tw.PremiumArchiveSearch
+         -> Tw.PremiumArchiveSearchT Bot
+              (Tw.RequestResult (Tw.PremiumArchiveSearchT Bot)))
+
 newtype TwitterT a
   = TwitterT { runTwitter :: ReaderT Tw.Session IO a }
   deriving newtype (Functor, Applicative, Monad)

@@ -1,14 +1,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Twitter.TweetGetter.PremiumTweetArchiveSearch
-  ( PremiumTweetArchiveSearch(..)
+module Twitter.TweetGetter.PremiumArchiveSearch
+  ( PremiumArchiveSearch(..)
+  , PremiumArchiveSearchT(..)
   )
   where
 
-import Twitter.TweetGetter.MonadRapperTweetsGetter
-import Twitter.TweetGetter.SearchResult
 import Twitter.Auth
 import Twitter.Call
+import Twitter.TweetGetter.Mock
+import Twitter.TweetGetter.MonadRapperTweetsGetter
+import Twitter.TweetGetter.SearchResult
 import Util
 
 import Protolude
@@ -17,15 +19,21 @@ import qualified Data.Time                            as Time
 import qualified Web.Twitter.Conduit                  as Twitter
 import qualified Web.Twitter.Conduit.Request.Internal as Twitter
 
-data PremiumTweetArchiveSearch
-  = PremiumTweetArchiveSearch
+data PremiumArchiveSearch
+  = PremiumArchiveSearch
       { nextToken :: !(Maybe NextPageToken)
       , toDate    :: !(Maybe Time.UTCTime)
       }
 
+newtype PremiumArchiveSearchT m a
+  = PremiumArchiveSearchT (m a)
+  deriving newtype (Functor, Applicative, Monad, MonadCall)
+
+deriving newtype instance MonadReader ctx m => MonadReader ctx (PremiumArchiveSearchT m)
+
 instance
   ( MonadCall m, HasTwitterAuth ctx m )
-  => MonadRapperTweetsGetter PremiumTweetArchiveSearch m
+  => MonadRapperTweetsGetter PremiumArchiveSearch (PremiumArchiveSearchT m)
   where
     getRapperTweets = getPremiumSearchQuery
 
@@ -33,17 +41,17 @@ getPremiumSearchQuery
   :: ( HasTwitterAuth context m
      , MonadCall m
      )
-  => PremiumTweetArchiveSearch
+  => PremiumArchiveSearch
   -> m (RequestResult m)
 
-getPremiumSearchQuery PremiumTweetArchiveSearch{..} = do
+getPremiumSearchQuery PremiumArchiveSearch{..} = do
   SearchResults{..} <- call query
 
   let nextRequest = case next of
         Nothing -> Nothing
         token@(Just _) ->
           Just $ getPremiumSearchQuery
-            PremiumTweetArchiveSearch
+            PremiumArchiveSearch
               { nextToken = token
               , ..
               }
@@ -77,3 +85,13 @@ premiumSearchQuery
           , ("maxResults", Twitter.PVInteger 500)
           ]
       }
+
+instance
+  Monad m
+  => MonadRapperTweetsGetter PremiumArchiveSearch (MockedCallT m)
+  where
+    getRapperTweets searchRequest
+      = pure RequestResult
+          { tweets      = mockTweets
+          , nextRequest = Just $ getRapperTweets searchRequest
+          }
