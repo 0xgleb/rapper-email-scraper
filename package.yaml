@@ -22,12 +22,14 @@ dependencies:
 - base
 - aeson
 - bytestring
+- containers
 - data-default
 - directory
 - extra
 - generic-lens
 - lens
 - lens-regex
+- mtl
 - protolude
 - regex-posix
 - text
@@ -60,6 +62,7 @@ default-extensions:
 - RecordWildCards
 - ScopedTypeVariables
 - StandaloneDeriving
+- TupleSections
 - TypeApplications
 - TypeOperators
 

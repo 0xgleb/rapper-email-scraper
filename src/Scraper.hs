@@ -11,6 +11,7 @@ module Scraper
 import           Scraper.Email
 import qualified Twitter       as Tw
 import           Util
+import JSONFileManager
 
 import Protolude
 
@@ -44,6 +45,7 @@ newtype TweetId
 scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
+     , MonadJSONFileManager m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m
@@ -89,6 +91,7 @@ scrape
   :: ( HasScraperContext context m
      , Tw.Session `GLens.Subtype` context
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
+     , MonadJSONFileManager m
      , Tw.MonadCall m
      , MonadSay m
      , MonadIO m

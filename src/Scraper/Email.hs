@@ -13,6 +13,7 @@ import Scraper.Duplicates
 import Scraper.Unmatched
 import Twitter.TweetGetter.SearchResult
 import Util
+import JSONFileManager
 
 import Control.Lens
 import Protolude
@@ -20,7 +21,6 @@ import Text.Regex.Posix (Regex)
 
 import qualified Data.Generics.Product as GLens
 import qualified Data.Text             as Txt
-import qualified System.Directory      as Dir
 import qualified Text.Regex.Lens       as Regex
 import qualified Text.Regex.Quote      as Regex
 import qualified Web.Twitter.Types     as Twitter
@@ -28,7 +28,8 @@ import qualified Web.Twitter.Types     as Twitter
 
 extractEmails
   :: forall subcontext m context
-   . ( MonadSay m
+   . ( MonadJSONFileManager m
+     , MonadSay m
      , MonadIO m
      , MonadReader context m
      , subcontext `GLens.Subtype` context
@@ -56,7 +57,7 @@ extractEmails tweets = do
 
       filePath = "rapper-emails.txt"
 
-  fileExists <- liftIO $ Dir.doesFileExist filePath
+  fileExists <- doesFileExist filePath
 
   savedEmails <-
     if fileExists
@@ -75,7 +76,7 @@ extractEmails tweets = do
                 else snd accumulated
               )
 
-  saveUnmatchedTweet truncatedTweets
+  saveUnmatchedTweets truncatedTweets
 
   void $ forM (filter (not . flip elem savedEmails) emails) $ \(Email email) ->
     liftIO $ appendFile filePath $ email <> "\n"

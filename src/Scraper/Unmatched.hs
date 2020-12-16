@@ -2,7 +2,7 @@
 
 module Scraper.Unmatched
   ( UnmatchedTweet(..)
-  , saveUnmatchedTweet
+  , saveUnmatchedTweets
 
   , SavedTweets(..)
   )
@@ -10,26 +10,23 @@ module Scraper.Unmatched
 
 import qualified Prelude
 import           Protolude
+import JSONFileManager
 
 import qualified Data.Aeson           as Aeson
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict  as Map
 import qualified Data.Text            as Txt
-import qualified System.Directory     as Dir
 import qualified Web.Twitter.Types    as Twitter
 
-saveUnmatchedTweet :: MonadIO m => [UnmatchedTweet] -> m ()
-saveUnmatchedTweet unmatchedTweets = do
+
+saveUnmatchedTweets :: MonadJSONFileManager m => [UnmatchedTweet] -> m ()
+saveUnmatchedTweets unmatchedTweets = do
   let filePath = "unmatched-tweets.json"
 
-  fileExists <- liftIO $ Dir.doesFileExist filePath
+  fileExists <- doesFileExist filePath
 
   let savedData
-        | not fileExists
-        = pure $ Just $ SavedTweets []
-
-        | otherwise
-        = liftIO $ fmap Aeson.decode $ BSL.readFile filePath
+        | not fileExists = pure $ Just $ SavedTweets []
+        | otherwise      = readJSONFile filePath
 
   savedTweets <- savedData >>= \case
     Just (SavedTweets savedTweets) ->
@@ -38,9 +35,7 @@ saveUnmatchedTweet unmatchedTweets = do
     Nothing -> do
       Prelude.error $ "Couldn't parse " <> filePath
 
-  liftIO
-    $ BSL.writeFile filePath $ Aeson.encode
-    $ SavedTweets $ savedTweets <> unmatchedTweets
+  writeJSONFile filePath $ SavedTweets $ savedTweets <> unmatchedTweets
 
 data UnmatchedTweet
   = UnmatchedTweet
@@ -50,7 +45,7 @@ data UnmatchedTweet
   deriving stock (Generic, Show, Eq)
 
 newtype SavedTweets
-  = SavedTweets [UnmatchedTweet]
+  = SavedTweets { unSavedTweets :: [UnmatchedTweet] }
   deriving newtype (Show, Eq)
 
 instance Aeson.ToJSON SavedTweets where
