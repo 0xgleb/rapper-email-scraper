@@ -35,6 +35,7 @@ instance MonadIO m => MonadJSONFileManager (IOJSONFileManagerT m) where
   readJSONFile
     = IOJSONFileManagerT . liftIO . fmap Aeson.decode . BSL.readFile
 
+
 newtype StateJSONFileManager a
   = StateJSONFileManager
       { runStateJSONFileManager :: State (Map.Map FilePath BSL.ByteString) a }
@@ -42,12 +43,11 @@ newtype StateJSONFileManager a
 
 instance MonadJSONFileManager StateJSONFileManager where
   doesFileExist filePath
-    = StateJSONFileManager $ (\files -> filePath `Map.member` files) <$> get
+    = StateJSONFileManager $ (filePath `Map.member`) <$> get
 
   writeJSONFile filePath value
-    = StateJSONFileManager
-    $ state (\files -> ((), Map.insert filePath (Aeson.encode value) files))
+    = StateJSONFileManager $ state
+    $ ((),) . Map.insert filePath (Aeson.encode value)
 
   readJSONFile filePath
-    = StateJSONFileManager
-    $ fmap (Aeson.decode <=< Map.lookup filePath) get
+    = StateJSONFileManager $ (Aeson.decode <=< Map.lookup filePath) <$> get

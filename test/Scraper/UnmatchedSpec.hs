@@ -34,12 +34,11 @@ spec = do
           Aeson.decode (Aeson.encode hackSavedTweets)
             `shouldBe` Just hackSavedTweets
 
-  describe "saveUnmatchedTweet @ReaderJSONFileManager" $ do
+  describe "saveUnmatchedTweet @StateJSONFileManager" $ do
     it "can save a list of unmatched tweets and always read it back"
-      $ property $ \(SavedTweets unmatchedTweets) ->
+      $ property $ \savedTweets@(SavedTweets unmatchedTweets) ->
           let parsedUnmatchedTweets = fst $ flip runState (Map.fromList []) $ runStateJSONFileManager $ do
                 writeJSONFile "unmatched-tweets.json" $ SavedTweets []
                 saveUnmatchedTweets unmatchedTweets
-                maybe Nothing (Just . unSavedTweets)
-                  <$> readJSONFile "unmatched-tweets.json"
-          in parsedUnmatchedTweets `shouldBe` Just unmatchedTweets
+                readJSONFile "unmatched-tweets.json"
+          in parsedUnmatchedTweets `shouldBe` Just savedTweets
