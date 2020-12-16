@@ -1,12 +1,13 @@
 module Twitter.User
   ( sendBeatsBotHandle
-
-  , TargetTweetCount
-  , getUserData
+  , TargetTweetCount(..)
+  , MonadGetUser(..)
+  , GetUserT(..)
   )
   where
 
 import Twitter.Call
+import Twitter.TweetGetter.Mock
 import Util
 
 import Protolude
@@ -14,23 +15,31 @@ import Protolude
 import qualified Web.Twitter.Conduit as Twitter
 import qualified Web.Twitter.Types   as Twitter
 
-sendBeatsBotHandle :: Twitter.UserParam
-sendBeatsBotHandle = Twitter.ScreenNameParam "SendBeatsBot"
-
 newtype TargetTweetCount
   = TargetTweetCount Int
   deriving newtype (Show)
 
-getUserData
-  :: ( MonadCall m
-     , MonadSay m
-     )
-  => m (Twitter.UserId, TargetTweetCount)
+class Monad m => MonadGetUser (m :: Type -> Type) where
+  getUserData :: m (Twitter.UserId, TargetTweetCount)
 
-getUserData = do
-  Twitter.User{..} <-
-    call $ Twitter.usersShow sendBeatsBotHandle
+newtype GetUserT m a
+  = GetUserT (m a)
+  deriving newtype (Functor, Applicative, Monad)
 
-  say $ "SendBeatsBot has " <> show userStatusesCount <> " tweets\n\n"
+instance (MonadCall m, MonadSay m) => MonadGetUser (GetUserT m) where
+  getUserData = GetUserT $ do
+    Twitter.User{..} <-
+      call $ Twitter.usersShow sendBeatsBotHandle
 
-  pure (userId, TargetTweetCount userStatusesCount)
+    say $ "SendBeatsBot has " <> show userStatusesCount <> " tweets\n\n"
+
+    pure (userId, TargetTweetCount userStatusesCount)
+
+instance Monad m => MonadGetUser (MockedCallT m) where
+  getUserData = MockedCallT $ pure
+    ( Twitter.userId mockUser
+    , TargetTweetCount $ length mockTweets
+    )
+
+sendBeatsBotHandle :: Twitter.UserParam
+sendBeatsBotHandle = Twitter.ScreenNameParam "SendBeatsBot"

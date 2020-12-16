@@ -12,6 +12,7 @@ import Protolude
 
 import qualified Data.Text as Txt
 import qualified Data.Time as Time
+import qualified Control.Monad.Trans as Trans
 
 flipFoldl
   :: Foldable foldable
@@ -45,5 +46,8 @@ newtype MockSayT m a
   = MockSayT { runMockSayT :: StateT [Text] m a }
   deriving newtype (Functor, Applicative, Monad)
 
+instance Trans.MonadTrans MockSayT where
+  lift = MockSayT . lift
+
 instance Monad m => MonadSay (MockSayT m) where
-  say text = MockSayT $ state $ ((),) . (text :)
+  say text = MockSayT $ state $ ((),) . (<> [text])

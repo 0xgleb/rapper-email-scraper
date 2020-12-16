@@ -1,16 +1,26 @@
+{-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Scraper
   ( ScraperContext(..)
+  , ProcessedTweetCount(..)
   , TweetId(..)
   , Mode(..)
   , scrapeRapperEmails
+
+  , MonadGetStatusById(..)
+  , GetStatusByIdT(..)
+  , MockedGetStatusByIdT(..)
+
+  , ProceedIfNotEmptyArgs(..)
+  , proceedIfNotEmpty
   )
   where
 
 import           FileManager
 import           Scraper.Email
 import qualified Twitter       as Tw
+import Twitter.TweetGetter.Mock
 import           Util
 
 import Protolude
@@ -20,6 +30,7 @@ import qualified Data.Generics.Product as Generic
 import qualified Data.Time             as Time
 import qualified Web.Twitter.Conduit   as Twitter
 import qualified Web.Twitter.Types     as Twitter
+import qualified Control.Monad.Trans as Trans
 
 data ScraperContext
   = ScraperContext
@@ -46,10 +57,9 @@ scrapeRapperEmails
   :: ( MonadReader ScraperContext m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
+     , MonadGetStatusById m
      , MonadFileManager m
-     , Tw.MonadCall m
      , MonadSay m
-     , MonadIO m
      )
   => Mode
   -> Maybe TweetId
@@ -89,12 +99,13 @@ newtype ProcessedTweetCount
   deriving newtype (Show, Num)
 
 scrape
-  :: ( HasScraperContext context m
+  :: forall context m
+   . ( HasScraperContext context m
      , Tw.Session `GLens.Subtype` context
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
+     , MonadGetStatusById m
      , MonadFileManager m
-     , Tw.MonadCall m
      , MonadSay m
      )
   => ScrapeArgs m
@@ -124,7 +135,7 @@ scrape ScrapeArgs{..} = do
 
   let hasNext = isJust nextRequest
 
-  proceedIfNotEmpty ProceedIfNotEmptyArgs{..}
+  proceedIfNotEmpty @ScraperContext @context ProceedIfNotEmptyArgs{..}
     $ scrape ScrapeArgs
         { requestCount = requestCount + 1
         , tweetCount   = processedTweetCount
@@ -144,28 +155,42 @@ data ProceedIfNotEmptyArgs
 class Monad m => MonadGetStatusById m where
   getStatusById :: Twitter.StatusId -> m Twitter.Status
 
--- newtype GetStatusByIdT m a
---   = GetStatusByIdT (m a)
---   deriving newtype (Functor, Applicative, Monad)
+newtype GetStatusByIdT m a
+  = GetStatusByIdT (m a)
+  deriving newtype (Functor, Applicative, Monad)
 
-instance (Monad m, Tw.MonadCall m) => MonadGetStatusById m where
-  getStatusById = Tw.call . Twitter.statusesShowId
+instance (Monad m, Tw.MonadCall m) => MonadGetStatusById (GetStatusByIdT m) where
+  getStatusById = GetStatusByIdT . Tw.call . Twitter.statusesShowId
+
+newtype MockedGetStatusByIdT m a
+  = MockedGetStatusByIdT { runMockedGetStatusByIdT :: m a }
+  deriving newtype (Functor, Applicative, Monad)
+
+instance Trans.MonadTrans MockedGetStatusByIdT where
+  lift = MockedGetStatusByIdT
+
+instance Monad m => MonadGetStatusById (MockedGetStatusByIdT m) where
+  getStatusById _ = MockedGetStatusByIdT $ pure mockStatus
 
 proceedIfNotEmpty
-  :: ( MonadSay m
-     , Tw.MonadCall m
-     , HasScraperContext ctx m
+  :: forall subcontext context m
+   . ( MonadSay m
+     , MonadGetStatusById m
+     , MonadReader context m
+     , subcontext `GLens.Subtype` context
+     , Tw.TargetTweetCount `GLens.HasType` subcontext
      )
   => ProceedIfNotEmptyArgs
   -> m ()
   -> m ()
 
 proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
-  | hasNext = do
-      say
-        "\nTwitter API returned no tweets for this request. End of scraping.\n"
+  | not hasNext = do
+      say "\nTwitter API returned no tweets for this request.\
+          \ End of scraping.\n"
 
-      targetTweetCount <- GLens.getTyped @Tw.TargetTweetCount . GLens.upcast @ScraperContext <$> ask
+      targetTweetCount <-
+        GLens.getTyped @Tw.TargetTweetCount . GLens.upcast @subcontext @context <$> ask
 
       when (show @_ @Text processedTweetCount /= show targetTweetCount)
         $ say "WARNING!"

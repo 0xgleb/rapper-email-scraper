@@ -92,7 +92,7 @@ spec = do
 
   describe "extractEmailsFromTweets" $ do
     it "can extract and save emails from the tweets you give it" $ do
-      let extractionResult = runTestMonad extractTestContext $ do
+      let (extractionResult, _) = runTestMonad extractTestContext $ do
             let filePath = "rapper-emails.txt"
             initEmails <- readEmails @_ @Email filePath
             let initiallyEmpty = initEmails == []

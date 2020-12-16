@@ -90,8 +90,8 @@ instance
   Monad m
   => MonadRapperTweetsGetter PremiumArchiveSearch (MockedCallT m)
   where
-    getRapperTweets searchRequest
+    getRapperTweets _searchRequest
       = pure RequestResult
           { tweets      = mockTweets
-          , nextRequest = Just $ getRapperTweets searchRequest
+          , nextRequest = Nothing -- Just $ getRapperTweets searchRequest
           }

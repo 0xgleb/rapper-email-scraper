@@ -82,8 +82,8 @@ freeSearchQuery = query
 
 
 instance Monad m => MonadRapperTweetsGetter FreeSearch (MockedCallT m) where
-  getRapperTweets searchRequest
+  getRapperTweets _searchRequest
     = pure RequestResult
         { tweets      = mockTweets
-        , nextRequest = Just $ getRapperTweets searchRequest
+        , nextRequest = Nothing -- Just $ getRapperTweets searchRequest
         }

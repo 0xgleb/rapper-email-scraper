@@ -1,6 +1,7 @@
 module Twitter.TweetGetter.Mock
   ( MockedCallT(..)
   , mockEmails
+  , mockStatus
   , mockTweets
   , mockUser
   )
@@ -22,6 +23,39 @@ mockEmails :: [Email]
 mockEmails
   = Email <$> ["test@email.com", "test@gmail.com"]
 
+mockStatus :: Twitter.Status
+mockStatus = Twitter.Status
+  { statusContributors        = Nothing
+  , statusCoordinates         = Nothing
+  , statusCreatedAt           = T.UTCTime (T.fromGregorian 2020 11 3) 0
+  , statusCurrentUserRetweet  = Nothing
+  , statusEntities            = Nothing
+  , statusExtendedEntities    = Nothing
+  , statusFavoriteCount       = 44
+  , statusFavorited           = Nothing
+  , statusFilterLevel         = Nothing
+  , statusId                  = 9898743
+  , statusInReplyToScreenName = Nothing
+  , statusInReplyToStatusId   = Nothing
+  , statusInReplyToUserId     = Nothing
+  , statusLang                = Nothing
+  , statusPlace               = Nothing
+  , statusPossiblySensitive   = Nothing
+  , statusScopes              = Nothing
+  , statusQuotedStatusId      = Nothing
+  , statusQuotedStatus        = Nothing
+  , statusRetweetCount        = 34
+  , statusRetweeted           = Nothing
+  , statusRetweetedStatus     = Nothing
+  , statusSource              = "source"
+  , statusText                = "lalalalalala this is tweet text"
+  , statusTruncated           = False
+  , statusUser                = mockUser
+  , statusWithheldCopyright   = Nothing
+  , statusWithheldInCountries = Nothing
+  , statusWithheldScope       = Nothing
+  , statusDisplayTextRange    = Nothing
+  }
 mockTweets :: [Tweet]
 mockTweets =
   [ Tweet
