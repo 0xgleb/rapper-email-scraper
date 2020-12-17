@@ -5,6 +5,7 @@ module Util
   , MonadSay(..)
   , IOSayT(..)
   , MockSayT(..)
+  , type ($)
   )
   where
 
@@ -13,6 +14,9 @@ import Protolude
 import qualified Data.Text as Txt
 import qualified Data.Time as Time
 import qualified Control.Monad.Trans as Trans
+
+type family ($) (f :: a -> b) (x :: a) :: b where
+  f $ b = f b
 
 flipFoldl
   :: Foldable foldable

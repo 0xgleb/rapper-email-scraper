@@ -32,7 +32,7 @@ class Monad m => MonadFileManager (m :: Type -> Type) where
     => FilePath
     -> [a]
     -> [a]
-    -> m ()
+    -> m [a]
 
 newtype IOFileManagerT (m :: Type -> Type) (a :: Type)
   = IOFileManagerT (m a)
@@ -55,8 +55,11 @@ instance MonadIO m => MonadFileManager (IOFileManagerT m) where
        else pure []
 
   saveUnsavedEmails filePath savedEmails emails = IOFileManagerT $ liftIO $ do
-    void $ forM (filter (not . flip elem savedEmails) emails) $ \email ->
+    let newEmails = filter (not . flip elem savedEmails) emails
+    void $ forM newEmails $ \email ->
       appendFile filePath $ Coerce.coerce email <> "\n"
+
+    pure $ savedEmails <> newEmails
 
 
 newtype StateFileManager a
@@ -89,11 +92,12 @@ instance MonadFileManager StateFileManager where
 
   saveUnsavedEmails filePath _ emails = StateFileManager $ do
     savedEmails <- readWriterEmails filePath
-    let allEmails = savedEmails <> emails
+    let allEmails = savedEmails <> filter (not . (`elem` savedEmails)) emails
         text = foldl (\accum email -> accum <> Coerce.coerce email <> "\n")
                  ("" :: Text)
                  allEmails
     state $ ((),) . Map.insert filePath (toS text)
+    pure allEmails
 
 readWriterEmails
   :: Coerce.Coercible Text a

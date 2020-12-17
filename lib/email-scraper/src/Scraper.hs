@@ -3,6 +3,7 @@
 
 module Scraper
   ( ScraperContext(..)
+  , HasScraperContext
   , ProcessedTweetCount(..)
   , TweetId(..)
   , Mode(..)
@@ -14,6 +15,8 @@ module Scraper
 
   , ProceedIfNotEmptyArgs(..)
   , proceedIfNotEmpty
+
+  , module Scraper.Email
   )
   where
 
@@ -58,10 +61,11 @@ scrapeRapperEmails
      , MonadGetStatusById m
      , MonadFileManager m
      , MonadSay m
+     , MonadState [Email] m
      )
   => Mode
   -> Maybe TweetId
-  -> m ()
+  -> m [Email]
 
 scrapeRapperEmails mode oldestProcessedId = do
   toDate <- forM oldestProcessedId
@@ -101,12 +105,13 @@ scrape
    . ( HasScraperContext context m
      , Tw.MonadRapperTweetsGetter Tw.FreeSearch m
      , Tw.MonadRapperTweetsGetter Tw.PremiumArchiveSearch m
+     , MonadState [Email] m
      , MonadGetStatusById m
      , MonadFileManager m
      , MonadSay m
      )
   => ScrapeArgs m
-  -> m ()
+  -> m [Email]
 scrape ScrapeArgs{..} = do
   say $ "Starting request #" <> show requestCount
 
@@ -125,7 +130,9 @@ scrape ScrapeArgs{..} = do
     $  "Received " <> show currentTweetCount
     <> " tweets with the lowest id=" <> show minimumId
 
-  extractEmailsFromTweets @ScraperContext tweets
+  emailList <- extractEmailsFromTweets @ScraperContext tweets
+
+  put emailList
 
   say "Request processing complete. Email search and extraction completed."
   say $ "I have processed " <> show processedTweetCount <> " tweets in total"
@@ -173,13 +180,14 @@ proceedIfNotEmpty
   :: forall subcontext context m
    . ( MonadSay m
      , MonadGetStatusById m
+     , MonadState [Email] m
      , MonadReader context m
      , subcontext `GLens.Subtype` context
      , Tw.TargetTweetCount `GLens.HasType` subcontext
      )
   => ProceedIfNotEmptyArgs
-  -> m ()
-  -> m ()
+  -> m [Email]
+  -> m [Email]
 
 proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
   | not hasNext = do
@@ -198,6 +206,8 @@ proceedIfNotEmpty ProceedIfNotEmptyArgs{..} nextAction
       Twitter.Status{..} <- getStatusById minimumId
 
       say $ "Oldest processed tweet was created at " <> show (Time.utctDay statusCreatedAt)
+
+      get
 
   | otherwise = do
       say ""

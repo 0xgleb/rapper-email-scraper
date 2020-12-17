@@ -1,0 +1,83 @@
+name:                server
+version:             0.1.0.0
+github:              "githubuser/rapper-mail-scraper"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2020 Author name here"
+
+# extra-source-files:
+# - README.org
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/rapper-mail-scraper#readme>
+
+dependencies:
+- base
+- aeson
+- email-scraper
+- protolude
+- servant
+- servant-server
+- warp
+
+library:
+  source-dirs: src
+
+default-extensions:
+- ConstraintKinds
+- DataKinds
+- DeriveAnyClass
+- DeriveGeneric
+- DerivingStrategies
+- DerivingVia
+- DuplicateRecordFields
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedStrings
+- QuasiQuotes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeApplications
+- TypeOperators
+
+ghc-options:
+- -freverse-errors
+- -Wall
+- -Werror
+- -Wimplicit-prelude
+- -Wincomplete-record-updates
+- -Wmissing-home-modules
+- -Wnoncanonical-monad-instances
+- -Wnoncanonical-monoid-instances
+- -Wpartial-fields
+- -Wsemigroup
+
+tests:
+  rapper-mail-scraper-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - server
+    - hspec
+    - QuickCheck
+    # - generic-random
+    # - quickcheck-text

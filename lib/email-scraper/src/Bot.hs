@@ -3,10 +3,11 @@ module Bot
   )
   where
 
-import           FileManager
-import           Scraper
 import qualified Twitter as Tw
-import           Util
+
+import FileManager
+import Scraper
+import Util
 
 import Protolude
 import Unsafe.Coerce
@@ -24,7 +25,7 @@ data BotContext
   deriving stock (Generic)
 
 newtype Bot a
-  = Bot { runBot :: ReaderT BotContext IO a }
+  = Bot { runBot :: StateT [Email] (ReaderT BotContext IO) a }
   deriving MonadSay via IOSayT Bot
   deriving Tw.MonadCall via Tw.AuthorizedCallT Bot
   deriving MonadFileManager via IOFileManagerT Bot
@@ -35,6 +36,7 @@ newtype Bot a
     , Monad
     , MonadReader BotContext
     , MonadIO
+    , MonadState [Email]
     )
 
 instance Tw.MonadRapperTweetsGetter Tw.FreeSearch Bot where
@@ -59,14 +61,12 @@ newtype TwitterMonad a
   deriving Tw.MonadCall via Tw.AuthorizedCallT TwitterMonad
   deriving Tw.MonadGetUser via Tw.GetUserT TwitterMonad
 
-run :: IO ()
-run = do
+run :: MonadIO m => Mode -> m [Email]
+run mode = liftIO $ do
   session@Tw.PrivateSessionConstructor{..} <- Tw.createSession
 
   (userId, targetTweetCount) <-
     runReaderT (runTwitterMonad Tw.getUserData) session
 
-  let mode = Free $ Tw.FreeSearch Nothing
-
-  runReaderT (runBot (scrapeRapperEmails mode Nothing))
+  fst <$> runReaderT (runStateT (runBot $ scrapeRapperEmails mode Nothing) [])
     BotContext{..}

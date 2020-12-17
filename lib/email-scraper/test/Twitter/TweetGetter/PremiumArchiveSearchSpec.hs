@@ -12,5 +12,5 @@ spec = do
   describe "getPremiumArchiveSearchTweets" $ do
     it "works with mock instances" $ do
       let wrappedResult = tweets <$> getRapperTweets (PremiumArchiveSearch Nothing Nothing)
-          result        = runIdentity $ runMockedCallT @Identity wrappedResult
+          result        = runIdentity $ runMockedCallT wrappedResult
       result `shouldBe` mockTweets

@@ -7,10 +7,11 @@ module TestMonad
   )
   where
 
+import qualified Twitter as Tw
+
 import FileManager
 import Scraper
 import Util
-import qualified Twitter as Tw
 
 import Protolude
 import Unsafe.Coerce
@@ -23,10 +24,11 @@ data TestResult a
       { result     :: a
       , output     :: [Text]
       , fileSystem :: Map.Map FilePath BSL.ByteString
+      , allEmails  :: [Email]
       }
 
-tuplesToResult :: ((a, [Text]), Map FilePath BSL.ByteString) -> TestResult a
-tuplesToResult ((result, output), fileSystem)
+tuplesToResult :: (((a, [Email]), [Text]), Map FilePath BSL.ByteString) -> TestResult a
+tuplesToResult (((result, allEmails), output), fileSystem)
   = TestResult{..}
 
 runTestMonad :: ctx -> TestMonad ctx a -> TestResult a
@@ -34,36 +36,38 @@ runTestMonad ctx
   = tuplesToResult
   . flip runState (Map.fromList [])
   . runStateFileManager
-  -- . fmap fst
   . flip runStateT []
   . runMockSayT
   . runMockedGetStatusByIdT
   . Tw.runMockedCallT
   . flip runReaderT ctx
+  . flip runStateT []
   . runTestExtractEmailsFromTweets
 
 newtype TestMonad ctx a
   = TestMonad
       { runTestExtractEmailsFromTweets
-          :: ReaderT ctx (Tw.MockedCallT (MockedGetStatusByIdT (MockSayT StateFileManager))) a
+          :: StateT [Email]
+               (ReaderT ctx (Tw.MockedCallT (MockedGetStatusByIdT (MockSayT StateFileManager))))
+               a
       }
-  deriving newtype (Functor, Applicative, Monad, MonadReader ctx)
+  deriving newtype (Functor, Applicative, Monad, MonadReader ctx, MonadState [Email])
 
 instance MonadGetStatusById (TestMonad ctx) where
-  getStatusById = TestMonad . lift . lift . getStatusById
+  getStatusById = TestMonad . lift . lift . lift . getStatusById
 
 instance MonadFileManager (TestMonad ctx) where
-  doesFileExist = TestMonad . lift . lift . lift . lift . doesFileExist
-  readJSONFile  = TestMonad . lift . lift . lift . lift . readJSONFile
-  readEmails    = TestMonad . lift . lift . lift . lift . readEmails
+  doesFileExist = TestMonad . lift . lift . lift . lift . lift . doesFileExist
+  readJSONFile  = TestMonad . lift . lift . lift . lift . lift . readJSONFile
+  readEmails    = TestMonad . lift . lift . lift . lift . lift . readEmails
 
-  writeJSONFile = (TestMonad . lift . lift . lift . lift) ... writeJSONFile
+  writeJSONFile = (TestMonad . lift . lift . lift . lift . lift) ... writeJSONFile
 
   saveUnsavedEmails filePath
-    = (TestMonad . lift . lift . lift . lift) ... saveUnsavedEmails filePath
+    = (TestMonad . lift . lift . lift . lift . lift) ... saveUnsavedEmails filePath
 
 instance MonadSay (TestMonad ctx) where
-  say = TestMonad . lift . lift . lift . say
+  say = TestMonad . lift . lift . lift . lift . say
 
 instance Generic ctx => Tw.MonadRapperTweetsGetter Tw.FreeSearch (TestMonad ctx) where
   getRapperTweets = TestMonad . lift . unsafeCoerce

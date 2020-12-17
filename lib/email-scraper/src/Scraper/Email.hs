@@ -19,6 +19,7 @@ import Control.Lens
 import Protolude
 import Text.Regex.Posix (Regex)
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Generics.Product as GLens
 import qualified Data.Text             as Txt
 import qualified Text.Regex.Lens       as Regex
@@ -35,7 +36,7 @@ extractEmailsFromTweets
      , Twitter.UserId `GLens.HasType` subcontext
      )
   => [Tweet]
-  -> m ()
+  -> m [Email]
 
 extractEmailsFromTweets tweets = do
   userId <- GLens.getTyped @Twitter.UserId . GLens.upcast @subcontext <$> ask
@@ -78,7 +79,7 @@ extractEmailsFromTweets tweets = do
 
 newtype Email
   = Email Text
-  deriving newtype (Show, Eq)
+  deriving newtype (Show, Eq, Aeson.ToJSON)
 
 findEmailInText :: Text -> Maybe Email
 findEmailInText text

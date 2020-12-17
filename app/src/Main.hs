@@ -1,8 +1,8 @@
 module Main where
 
-import Bot
+import Server
 
 import Prelude
 
 main :: IO ()
-main = run
+main = runServer

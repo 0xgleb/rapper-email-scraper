@@ -30,7 +30,9 @@ compiler: ghc-8.8.4
 #   - auto-update
 #   - wai
 packages:
-- .
+- ./app
+- ./lib/server
+- ./lib/email-scraper
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

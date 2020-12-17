@@ -96,13 +96,13 @@ spec = do
             let filePath = "rapper-emails.txt"
             initEmails <- readEmails @_ @Email filePath
             let initiallyEmpty = initEmails == []
-            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext []
+            void $ extractEmailsFromTweets @ExtractTestContext @ExtractTestContext []
             noChangeEmails <- readEmails @_ @Email filePath
             let extractingEmptyListMakesNoChange = noChangeEmails == []
-            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
+            void $ extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
             emails <- readEmails @_ @Email filePath
             let extractingWorks = mockEmails == emails
-            extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
+            void $ extractEmailsFromTweets @ExtractTestContext @ExtractTestContext mockTweets
             finalEmails <- readEmails @_ @Email filePath
             let noDuplicates = mockEmails == finalEmails
             pure ExtractionResult{..}

@@ -40,7 +40,7 @@ spec = do
                   , hasNext             = True
                   , minimumId           = 12341234132
                   })
-                (say "hello")
+                (say "hello" >> pure [])
 
       output `shouldBe` ["", "hello"]
 
@@ -53,7 +53,7 @@ spec = do
                   , hasNext             = False
                   , minimumId           = 12341234132
                   })
-                (say "hello")
+                (say "hello" >> pure [])
 
       output `shouldBe`
         [ "\nTwitter API returned no tweets for this request. End of scraping.\n"

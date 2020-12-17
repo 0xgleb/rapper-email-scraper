@@ -11,5 +11,5 @@ spec = do
   describe "getFreeSearchTweets" $ do
     it "works with mock instances" $ do
       let wrappedResult = tweets <$> getRapperTweets (FreeSearch Nothing)
-          result        = runIdentity $ runMockedCallT @Identity wrappedResult
+          result        = runIdentity $ runMockedCallT wrappedResult
       result `shouldBe` mockTweets
