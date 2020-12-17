@@ -21,4 +21,4 @@ server = Bot.run $ Scraper.Free $ Twitter.FreeSearch Nothing
 runServer :: IO ()
 runServer = do
   putStrLn @Text "Starting the server on 8000"
-  run 8000 $ serve (Proxy @API) server
+  run 8080 $ serve (Proxy @API) server
