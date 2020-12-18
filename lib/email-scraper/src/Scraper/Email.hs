@@ -19,7 +19,7 @@ import Control.Lens
 import Protolude
 import Text.Regex.Posix (Regex)
 
-import qualified Data.Aeson as Aeson
+import qualified Data.Aeson            as Aeson
 import qualified Data.Generics.Product as GLens
 import qualified Data.Text             as Txt
 import qualified Text.Regex.Lens       as Regex

@@ -9,10 +9,15 @@ copyright:           "2020 Author name here"
 dependencies:
 - base
 - aeson
+- amazonka
+- amazonka-core
+- amazonka-s3
 - bytestring
+- conduit
 - containers
 - data-default
 - directory
+- exceptions
 - extra
 - generic-lens
 - lens
@@ -20,6 +25,7 @@ dependencies:
 - mtl
 - protolude
 - regex-posix
+- resourcet
 - text
 - time
 - twitter-conduit
